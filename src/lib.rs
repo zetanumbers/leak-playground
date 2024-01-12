@@ -1,4 +1,117 @@
-///
+//! ```
+//! use leak_playground::*;
+//! let (tx, rx) = rendezvous_channel();
+//! let mut scope = JoinScope::new(move || {
+//!     let _this_thread = rx.recv().unwrap();
+//! });
+//! let thrd = scope.spawn_static();
+//! tx.send(thrd).unwrap();
+//! ```
+//!
+//! ```compile_fail
+//! use leak_playground::*;
+//! let local = 42;
+//! let (tx, rx) = rendezvous_channel();
+//! let mut scope = JoinScope::new({
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx.recv().unwrap();
+//!         let inner_local = local;
+//!     }
+//! });
+//! let thrd = scope.spawn_static();
+//! tx.send(thrd).unwrap();
+//! ```
+//!
+//! ```compile_fail
+//! use leak_playground::*;
+//! let local = 42;
+//! let (tx, rx) = rendezvous_channel();
+//! let mut scope = JoinScope::new({
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! });
+//! let thrd = scope.spawn();
+//! tx.send(thrd).unwrap();
+//! ```
+//!
+//! ```compile_fail
+//! use leak_playground::*;
+//! let local = 42;
+//!
+//! let (tx1, rx1) = rendezvous_channel();
+//! let mut scope1 = JoinScope::new({
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx1.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! });
+//! let thrd1 = scope1.spawn();
+//!
+//! let (tx2, rx2) = rendezvous_channel();
+//! let mut scope2 = JoinScope::new({
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx2.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! });
+//! let thrd2 = scope2.spawn();
+//! tx1.send(thrd2).unwrap();
+//! tx2.send(thrd1).unwrap();
+//! ```
+//!
+//! ```
+//! use leak_playground::*;
+//! let local = 42;
+//!
+//! let mut scope1 = JoinScope::new({
+//!     let local = &local;
+//!     move || {
+//!         let _inner_local = local;
+//!     }
+//! });
+//! let thrd1 = scope1.spawn();
+//!
+//! let (tx2, rx2) = rendezvous_channel();
+//! let mut scope2 = JoinScope::new({
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx2.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! });
+//! let _thrd2 = scope2.spawn();
+//! tx2.send(thrd1).unwrap();
+//! ```
+//!
+//! ```
+//! use leak_playground::*;
+//! let local = 42;
+//!
+//! let mut scope1 = JoinScope::new({
+//!     let local = &local;
+//!     move || {
+//!         let _inner_local = local;
+//!     }
+//! });
+//! let thrd1 = scope1.spawn();
+//!
+//! let (tx2, rx2) = rendezvous_channel();
+//! let _thrd2 = JoinGuard::spawn({
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx2.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! });
+//! tx2.send(thrd1).unwrap();
+//! ```
+
 use std::marker::PhantomData;
 use std::sync::mpsc;
 use std::{mem, thread};
@@ -98,147 +211,4 @@ where
 
 pub fn rendezvous_channel<T>() -> (mpsc::SyncSender<T>, mpsc::Receiver<T>) {
     mpsc::sync_channel(0)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn scope_spawn_static() {
-        let (tx, rx) = rendezvous_channel();
-        let mut scope = JoinScope::new(move || {
-            let _this_thread = rx.recv().unwrap();
-        });
-        let thrd = scope.spawn_static();
-        tx.send(thrd).unwrap();
-    }
-
-    #[cfg(never)]
-    fn scope_spawn_static_nonstatic() {
-        let local = 42;
-        let (tx, rx) = rendezvous_channel();
-        let mut scope = JoinScope::new({
-            let local = &local;
-            move || {
-                let _this_thread = rx.recv().unwrap();
-                let inner_local = local;
-            }
-        });
-        let thrd = scope.spawn_static();
-        tx.send(thrd).unwrap();
-    }
-
-    #[cfg(never)]
-    fn scope_spawn_nonstatic() {
-        let local = 42;
-        let (tx, rx) = rendezvous_channel();
-        let mut scope = JoinScope::new({
-            let local = &local;
-            move || {
-                let _this_thread = rx.recv().unwrap();
-                let _inner_local = local;
-            }
-        });
-        let thrd = scope.spawn();
-        tx.send(thrd).unwrap();
-    }
-
-    #[cfg(never)]
-    fn two_scope_spawns_internested() {
-        let local = 42;
-
-        let (tx1, rx1) = rendezvous_channel();
-        let mut scope1 = JoinScope::new({
-            let local = &local;
-            move || {
-                let _this_thread = rx1.recv().unwrap();
-                let _inner_local = local;
-            }
-        });
-        let thrd1 = scope1.spawn();
-
-        let (tx2, rx2) = rendezvous_channel();
-        let mut scope2 = JoinScope::new({
-            let local = &local;
-            move || {
-                let _this_thread = rx2.recv().unwrap();
-                let _inner_local = local;
-            }
-        });
-        let thrd2 = scope2.spawn();
-        tx1.send(thrd2).unwrap();
-        tx2.send(thrd1).unwrap();
-    }
-
-    #[test]
-    fn two_scope_spawns_nested() {
-        let local = 42;
-
-        let mut scope1 = JoinScope::new({
-            let local = &local;
-            move || {
-                let _inner_local = local;
-            }
-        });
-        let thrd1 = scope1.spawn();
-
-        let (tx2, rx2) = rendezvous_channel();
-        let mut scope2 = JoinScope::new({
-            let local = &local;
-            move || {
-                let _this_thread = rx2.recv().unwrap();
-                let _inner_local = local;
-            }
-        });
-        let _thrd2 = scope2.spawn();
-        tx2.send(thrd1).unwrap();
-    }
-
-    #[test]
-    fn scope_spawn_and_spawn_nested() {
-        let local = 42;
-
-        let mut scope1 = JoinScope::new({
-            let local = &local;
-            move || {
-                let _inner_local = local;
-            }
-        });
-        let thrd1 = scope1.spawn();
-
-        let (tx2, rx2) = rendezvous_channel();
-        let _thrd2 = JoinGuard::spawn({
-            let local = &local;
-            move || {
-                let _this_thread = rx2.recv().unwrap();
-                let _inner_local = local;
-            }
-        });
-        tx2.send(thrd1).unwrap();
-    }
-
-    #[cfg(never)]
-    fn main() {
-        use std::time::Duration;
-
-        let (tx2, rx2) = rendezvous_channel();
-        {
-            let (tx, rx) = rendezvous_channel();
-            let mut scope = JoinScope::new({
-                move || {
-                    eprintln!("Hello from other thread!");
-                    let _this_thread = rx.recv().unwrap();
-                    thread::sleep(Duration::from_secs(1));
-                    eprintln!("Bye from other thread!");
-                    rx2.recv().unwrap();
-                }
-            });
-            let thrd = scope.spawn_static();
-            tx.send(thrd).unwrap();
-            eprintln!("Hello from main!");
-        }
-        tx2.send(()).unwrap();
-        eprintln!("Hello again from main!");
-    }
 }

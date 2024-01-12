@@ -116,6 +116,8 @@ use std::marker::PhantomData;
 use std::sync::mpsc;
 use std::{mem, thread};
 
+/// Handle to a thread, which joins on drop.
+/// Cannot be sent across threads, as opposed to [`JoinGuardScoped`].
 pub struct JoinGuard<'a> {
     // using unit as a return value for simplicity
     thread: Option<thread::JoinHandle<()>>,
@@ -136,6 +138,12 @@ impl<'a> JoinGuard<'a> {
             _invariant: PhantomData,
             _unsend: PhantomData,
         }
+    }
+}
+
+impl JoinGuard<'static> {
+    pub fn into_static_scoped(self) -> JoinGuardScoped<'static> {
+        JoinGuardScoped { _inner: self }
     }
 }
 
@@ -174,18 +182,11 @@ where
     {
         JoinGuard::spawn(self.f.take().expect("Second spawn"))
     }
-
-    #[track_caller]
-    pub fn spawn_static(&mut self) -> JoinGuardScoped<'static>
-    where
-        F: 'static,
-    {
-        JoinGuardScoped {
-            _inner: self.spawn_outside(),
-        }
-    }
 }
 
+/// Handle to a thread, which joins on drop.
+/// Can be sent across threads, but is more awkward to use than [`JoinGuard`].
+/// This type is returned by [`JoinScope::spawn`].
 pub struct JoinGuardScoped<'a> {
     _inner: JoinGuard<'a>,
 }

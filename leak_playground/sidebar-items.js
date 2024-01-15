@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["rendezvous_channel"],"struct":["JoinGuard","JoinGuardScoped","JoinScope"]};

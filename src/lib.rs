@@ -1,12 +1,19 @@
+#![feature(auto_traits, negative_impls)]
+//! ## JoinGuards
+//!
+//! ### Static JoinGuard self ownership
+//!
 //! ```
 //! use leak_playground::*;
 //! let (tx, rx) = rendezvous_channel();
 //! let mut scope = JoinScope::new(move || {
 //!     let _this_thread = rx.recv().unwrap();
 //! });
-//! let thrd = scope.spawn_static();
+//! let thrd = scope.spawn_outside().into_static_scoped();
 //! tx.send(thrd).unwrap();
 //! ```
+//!
+//! ### Unstatic JoinGuard uses static methods
 //!
 //! ```compile_fail
 //! use leak_playground::*;
@@ -19,9 +26,11 @@
 //!         let inner_local = local;
 //!     }
 //! });
-//! let thrd = scope.spawn_static();
+//! let thrd = scope.spawn_outside().into_static_scoped();
 //! tx.send(thrd).unwrap();
 //! ```
+//!
+//! ### Self ownership of JoinGuardScoped
 //!
 //! ```compile_fail
 //! use leak_playground::*;
@@ -37,6 +46,8 @@
 //! let thrd = scope.spawn();
 //! tx.send(thrd).unwrap();
 //! ```
+//!
+//! ### Two-step self ownership
 //!
 //! ```compile_fail
 //! use leak_playground::*;
@@ -65,6 +76,8 @@
 //! tx2.send(thrd1).unwrap();
 //! ```
 //!
+//! ### Nested ownership without cycles
+//!
 //! ```
 //! use leak_playground::*;
 //! let local = 42;
@@ -88,6 +101,8 @@
 //! let _thrd2 = scope2.spawn();
 //! tx2.send(thrd1).unwrap();
 //! ```
+//!
+//! ### Nested mixed ownership without cycles
 //!
 //! ```
 //! use leak_playground::*;
@@ -113,103 +128,37 @@
 //! ```
 
 use std::marker::PhantomData;
-use std::sync::mpsc;
-use std::{mem, thread};
 
-/// Handle to a thread, which joins on drop.
-/// Cannot be sent across threads, as opposed to [`JoinGuardScoped`].
-pub struct JoinGuard<'a> {
-    // using unit as a return value for simplicity
-    thread: Option<thread::JoinHandle<()>>,
-    _invariant: PhantomData<&'a mut &'a ()>,
-    _unsend: PhantomData<*mut ()>,
-}
+mod join_guard;
 
-unsafe impl Send for JoinGuard<'static> {}
-unsafe impl Sync for JoinGuard<'_> {}
+pub use join_guard::*;
 
-impl<'a> JoinGuard<'a> {
-    pub fn spawn<F>(f: F) -> Self
-    where
-        F: FnOnce() + Send + 'a,
-    {
-        JoinGuard {
-            thread: Some(thread::spawn(unsafe { make_fn_once_static(f) })),
-            _invariant: PhantomData,
-            _unsend: PhantomData,
-        }
+/// Proposed `Leak` trait
+///
+/// # Safety
+///
+/// Implement only if you know there's absolutelly no possible way to
+/// leak your type.
+pub unsafe auto trait Leak {}
+
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PhantomUnleak<'a>(PhantomData<&'a ()>, PhantomStaticUnleak);
+
+impl<'a> std::fmt::Debug for PhantomUnleak<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        "PhantomUnleak".fmt(f)
     }
 }
 
-impl JoinGuard<'static> {
-    pub fn into_static_scoped(self) -> JoinGuardScoped<'static> {
-        JoinGuardScoped { _inner: self }
+impl<'a> PhantomUnleak<'a> {
+    pub const fn new() -> Self {
+        PhantomUnleak(PhantomData, PhantomStaticUnleak)
     }
 }
 
-impl Drop for JoinGuard<'_> {
-    fn drop(&mut self) {
-        // Ignoring error, not propating, fine in this situation
-        let _ = self.thread.take().unwrap().join();
-    }
-}
+unsafe impl Leak for PhantomUnleak<'static> {}
 
-pub struct JoinScope<F> {
-    f: Option<F>,
-}
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct PhantomStaticUnleak;
 
-impl<F> JoinScope<F> {
-    pub fn new(f: F) -> Self {
-        JoinScope { f: Some(f) }
-    }
-}
-
-impl<F> JoinScope<F>
-where
-    F: FnOnce() + Send,
-{
-    #[track_caller]
-    pub fn spawn<'a>(&'a mut self) -> JoinGuardScoped<'a> {
-        JoinGuardScoped {
-            _inner: self.spawn_outside(),
-        }
-    }
-
-    #[track_caller]
-    pub fn spawn_outside<'a>(&mut self) -> JoinGuard<'a>
-    where
-        F: 'a,
-    {
-        JoinGuard::spawn(self.f.take().expect("Second spawn"))
-    }
-}
-
-/// Handle to a thread, which joins on drop.
-/// Can be sent across threads, but is more awkward to use than [`JoinGuard`].
-/// This type is returned by [`JoinScope::spawn`].
-pub struct JoinGuardScoped<'a> {
-    _inner: JoinGuard<'a>,
-}
-
-unsafe impl Send for JoinGuardScoped<'_> {}
-
-unsafe fn make_fn_once_static<'a, F>(f: F) -> impl FnOnce() + Send + 'static
-where
-    F: FnOnce() + Send + 'a,
-{
-    let mut f = Some(f);
-    make_fn_mut_static(move || (f.take().unwrap())())
-}
-
-unsafe fn make_fn_mut_static<'a, F>(f: F) -> impl FnMut() + Send + 'static
-where
-    F: FnMut() + Send + 'a,
-{
-    let f: Box<dyn FnMut() + Send + 'a> = Box::new(f);
-    let f: Box<dyn FnMut() + Send> = mem::transmute(f);
-    f
-}
-
-pub fn rendezvous_channel<T>() -> (mpsc::SyncSender<T>, mpsc::Receiver<T>) {
-    mpsc::sync_channel(0)
-}
+impl !Leak for PhantomStaticUnleak {}

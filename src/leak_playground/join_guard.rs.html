@@ -104,21 +104,20 @@
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::marker::PhantomData;
 <span class="kw">use </span>std::sync::mpsc;
 <span class="kw">use </span>std::{mem, thread};
 
-<span class="kw">use crate</span>::{Leak, PhantomUnleak};
+<span class="kw">use crate</span>::{Leak, Unleak};
 
 <span class="doccomment">/// Handle to a thread, which joins on drop.
 /// Cannot be sent across threads, as opposed to [`JoinGuardScoped`].
 </span><span class="kw">pub struct </span>JoinGuard&lt;<span class="lifetime">'a</span>&gt; {
     <span class="comment">// using unit as a return value for simplicity
     </span>thread: <span class="prelude-ty">Option</span>&lt;thread::JoinHandle&lt;()&gt;&gt;,
-    _invariant: PhantomData&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut &amp;</span><span class="lifetime">'a </span>()&gt;,
+    <span class="comment">// not sure about invariance
+    </span>_borrow: PhantomData&lt;Unleak&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut &amp;</span><span class="lifetime">'a </span>()&gt;&gt;,
     _unsend: PhantomData&lt;<span class="kw-2">*mut </span>()&gt;,
-    _unleak: PhantomUnleak&lt;<span class="lifetime">'a</span>&gt;,
 }
 
 <span class="kw">unsafe impl </span>Send <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'_</span>&gt; <span class="kw">where </span><span class="self">Self</span>: Leak {}
@@ -131,9 +130,8 @@
     {
         JoinGuard {
             thread: <span class="prelude-val">Some</span>(thread::spawn(<span class="kw">unsafe </span>{ make_fn_once_static(f) })),
-            _invariant: PhantomData,
+            _borrow: PhantomData,
             _unsend: PhantomData,
-            _unleak: PhantomUnleak::new(),
         }
     }
 }

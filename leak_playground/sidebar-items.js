@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["rendezvous_channel"],"struct":["JoinGuard","JoinGuardScoped","JoinScope","PhantomUnleak"],"trait":["Leak"]};
+window.SIDEBAR_ITEMS = {"fn":["rendezvous_channel"],"struct":["JoinGuard","JoinGuardScoped","JoinScope","Unleak"],"trait":["Leak"]};

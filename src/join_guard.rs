@@ -2,16 +2,16 @@ use std::marker::PhantomData;
 use std::sync::mpsc;
 use std::{mem, thread};
 
-use crate::{Leak, PhantomUnleak};
+use crate::{Leak, Unleak};
 
 /// Handle to a thread, which joins on drop.
 /// Cannot be sent across threads, as opposed to [`JoinGuardScoped`].
 pub struct JoinGuard<'a> {
     // using unit as a return value for simplicity
     thread: Option<thread::JoinHandle<()>>,
-    _invariant: PhantomData<&'a mut &'a ()>,
+    // not sure about invariance
+    _borrow: PhantomData<Unleak<&'a mut &'a ()>>,
     _unsend: PhantomData<*mut ()>,
-    _unleak: PhantomUnleak<'a>,
 }
 
 unsafe impl Send for JoinGuard<'_> where Self: Leak {}
@@ -24,9 +24,8 @@ impl<'a> JoinGuard<'a> {
     {
         JoinGuard {
             thread: Some(thread::spawn(unsafe { make_fn_once_static(f) })),
-            _invariant: PhantomData,
+            _borrow: PhantomData,
             _unsend: PhantomData,
-            _unleak: PhantomUnleak::new(),
         }
     }
 }

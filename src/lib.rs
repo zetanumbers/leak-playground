@@ -127,8 +127,6 @@
 //! tx2.send(thrd1).unwrap();
 //! ```
 
-use std::marker::PhantomData;
-
 mod join_guard;
 
 pub use join_guard::*;
@@ -141,22 +139,26 @@ pub use join_guard::*;
 /// leak your type.
 pub unsafe auto trait Leak {}
 
+#[repr(transparent)]
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PhantomUnleak<'a>(PhantomData<&'a ()>, PhantomStaticUnleak);
+pub struct Unleak<T>(pub T, PhantomStaticUnleak);
 
-impl<'a> std::fmt::Debug for PhantomUnleak<'a> {
+impl<T> std::fmt::Debug for Unleak<T>
+where
+    T: std::fmt::Debug,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        "PhantomUnleak".fmt(f)
+        f.debug_tuple("Unleak").field(&self.0).finish()
     }
 }
 
-impl<'a> PhantomUnleak<'a> {
-    pub const fn new() -> Self {
-        PhantomUnleak(PhantomData, PhantomStaticUnleak)
+impl<T> Unleak<T> {
+    pub const fn new(v: T) -> Self {
+        Unleak(v, PhantomStaticUnleak)
     }
 }
 
-unsafe impl Leak for PhantomUnleak<'static> {}
+unsafe impl<T: 'static> Leak for Unleak<T> {}
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct PhantomStaticUnleak;

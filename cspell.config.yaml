@@ -8,6 +8,7 @@ dictionaryDefinitions:
 dictionaries:
   - project-words
 ignorePaths:
-  - 'node_modules'
+  - 'target'
+  - 'Cargo.lock'
   - '/project-words.txt'
 

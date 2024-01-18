@@ -21,9 +21,8 @@
 //!
 //! ### `Leak` future with `JoinGuard`s
 //!
-//! This is fine assuming that pinned future is never
-//! able to be deallocated without a drop (i.e. forgotten). See
-//! [rust-lang/rust#79327](https://github.com/rust-lang/rust/pull/79327).
+//! This is fine because of the pin's [drop
+//! guarantee](https://doc.rust-lang.org/1.75.0/std/pin/index.html#drop-guarantee).
 //!
 //! **Currently emits an error about unimplemented `Leak`**
 //!

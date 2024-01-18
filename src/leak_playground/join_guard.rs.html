@@ -144,7 +144,7 @@
 
 <span class="kw">impl </span>Drop <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'_</span>&gt; {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="comment">// Ignoring error, not propating, fine in this situation
+        <span class="comment">// Ignoring error, not propagating, fine in this situation
         </span><span class="kw">let _ </span>= <span class="self">self</span>.thread.take().unwrap().join();
     }
 }

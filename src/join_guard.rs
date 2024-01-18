@@ -38,7 +38,7 @@ impl JoinGuard<'static> {
 
 impl Drop for JoinGuard<'_> {
     fn drop(&mut self) {
-        // Ignoring error, not propating, fine in this situation
+        // Ignoring error, not propagating, fine in this situation
         let _ = self.thread.take().unwrap().join();
     }
 }

@@ -5,7 +5,7 @@
 //!
 //! ### `Leak` future with internal unleak logic
 //!
-//! **Currenty emits "higher-ranked lifetime error"**
+//! **Currently emits "higher-ranked lifetime error"**
 //!
 //! ```
 //! use leak_playground::*;
@@ -25,7 +25,7 @@
 //! able to be deallocated without a drop (i.e. forgotten). See
 //! [rust-lang/rust#79327](https://github.com/rust-lang/rust/pull/79327).
 //!
-//! **Currenty emits an error about unimplemented `Leak`**
+//! **Currently emits an error about unimplemented `Leak`**
 //!
 //! ```
 //! use leak_playground::*;
@@ -46,7 +46,7 @@
 //!
 //! ### `!Leak` future with external unleak logic
 //!
-//! **Currenty emits "higher-ranked lifetime error", instead of something about unimplemented `Leak`**
+//! **Currently emits "higher-ranked lifetime error", instead of something about unimplemented `Leak`**
 //!
 //! ```compile_fail
 //! use leak_playground::*;
@@ -73,7 +73,7 @@
 //! tx.send(thrd).unwrap();
 //! ```
 //!
-//! ### Unstatic JoinGuard uses static methods
+//! ### Non-static JoinGuard uses static methods
 //!
 //! ```compile_fail
 //! use leak_playground::*;
@@ -195,7 +195,7 @@ pub use join_guard::*;
 ///
 /// # Safety
 ///
-/// Implement only if you know there's absolutelly no possible way to
+/// Implement only if you know there's absolutely no possible way to
 /// leak your type.
 pub unsafe auto trait Leak {}
 

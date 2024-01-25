@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Rc"],"trait":["RcSafe"]};
+window.SIDEBAR_ITEMS = {"struct":["Rc"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["mpsc"]};
+window.SIDEBAR_ITEMS = {"mod":["mpsc"],"struct":["Arc"]};

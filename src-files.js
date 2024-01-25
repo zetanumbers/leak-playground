@@ -1,4 +1,4 @@
 var srcIndex = new Map(JSON.parse('[\
-["leak_playground",["",[],["join_guard.rs","lib.rs"]]]\
+["leak_playground",["",[],["lib.rs","mem.rs","rc.rs","sync.rs","thread.rs"]]]\
 ]'));
 createSrcSidebar();

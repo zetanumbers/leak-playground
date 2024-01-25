@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["spawn_scoped"],"struct":["JoinGuard","JoinGuardScoped","JoinScope"]};

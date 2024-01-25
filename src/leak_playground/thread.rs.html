@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/join_guard.rs`."><title>join_guard.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-4e54bb2b497cc83f.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="leak_playground" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (30dfb9e04 2024-01-14)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0b2e2def73e61cbe.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/thread.rs`."><title>thread.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-b1a3e7f8283b8434.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="leak_playground" data-themes="" data-resource-suffix="" data-rustdoc-version="1.77.0-nightly (ef71f1047 2024-01-21)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-f2adc0d6ca4d09fb.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-0b2e2def73e61cbe.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../leak_playground/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -104,14 +104,18 @@
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::marker::PhantomData;
-<span class="kw">use </span>std::sync::mpsc;
-<span class="kw">use </span>std::{mem, thread};
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::thread::JoinHandle;
+<span class="kw">use </span>std::{marker::PhantomData, thread};
 
-<span class="kw">use crate</span>::{Leak, Unleak};
+<span class="kw">use crate</span>::{mem, Leak, Unleak};
 
 <span class="doccomment">/// Handle to a thread, which joins on drop.
+///
 /// Cannot be sent across threads, as opposed to [`JoinGuardScoped`].
+///
+/// To spawn use [`spawn_scoped`].
 </span><span class="kw">pub struct </span>JoinGuard&lt;<span class="lifetime">'a</span>&gt; {
     <span class="comment">// using unit as a return value for simplicity
     </span>thread: <span class="prelude-ty">Option</span>&lt;thread::JoinHandle&lt;()&gt;&gt;,
@@ -123,22 +127,26 @@
 <span class="kw">unsafe impl </span>Send <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'_</span>&gt; <span class="kw">where </span><span class="self">Self</span>: Leak {}
 <span class="kw">unsafe impl </span>Sync <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'_</span>&gt; {}
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; JoinGuard&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">pub fn </span>spawn&lt;F&gt;(f: F) -&gt; <span class="self">Self
-    </span><span class="kw">where
-        </span>F: FnOnce() + Send + <span class="lifetime">'a</span>,
-    {
-        JoinGuard {
-            thread: <span class="prelude-val">Some</span>(thread::spawn(<span class="kw">unsafe </span>{ make_fn_once_static(f) })),
-            _borrow: PhantomData,
-            _unsend: PhantomData,
-        }
+<span class="kw">pub fn </span>spawn_scoped&lt;<span class="lifetime">'a</span>, F&gt;(f: F) -&gt; JoinGuard&lt;<span class="lifetime">'a</span>&gt;
+<span class="kw">where
+    </span>F: FnOnce() + Send + <span class="lifetime">'a</span>,
+{
+    JoinGuard {
+        thread: <span class="prelude-val">Some</span>(thread::spawn(<span class="kw">unsafe </span>{ make_fn_once_static(f) })),
+        _borrow: PhantomData,
+        _unsend: PhantomData,
     }
 }
 
 <span class="kw">impl </span>JoinGuard&lt;<span class="lifetime">'static</span>&gt; {
     <span class="kw">pub fn </span>into_static_scoped(<span class="self">self</span>) -&gt; JoinGuardScoped&lt;<span class="lifetime">'static</span>&gt; {
         JoinGuardScoped { _inner: <span class="self">self </span>}
+    }
+
+    <span class="kw">pub fn </span>into_join_handle(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; JoinHandle&lt;()&gt; {
+        <span class="kw">let </span>out = <span class="self">self</span>.thread.take().unwrap();
+        <span class="kw">unsafe </span>{ mem::forget_unchecked(<span class="self">self</span>) };
+        out
     }
 }
 
@@ -175,7 +183,7 @@
     <span class="kw">where
         </span>F: <span class="lifetime">'a</span>,
     {
-        JoinGuard::spawn(<span class="self">self</span>.f.take().expect(<span class="string">"Second spawn"</span>))
+        spawn_scoped(<span class="self">self</span>.f.take().expect(<span class="string">"Second spawn"</span>))
     }
 }
 
@@ -201,11 +209,7 @@
     </span>F: FnMut() + Send + <span class="lifetime">'a</span>,
 {
     <span class="kw">let </span>f: Box&lt;<span class="kw">dyn </span>FnMut() + Send + <span class="lifetime">'a</span>&gt; = Box::new(f);
-    <span class="kw">let </span>f: Box&lt;<span class="kw">dyn </span>FnMut() + Send&gt; = mem::transmute(f);
+    <span class="kw">let </span>f: Box&lt;<span class="kw">dyn </span>FnMut() + Send&gt; = core::mem::transmute(f);
     f
-}
-
-<span class="kw">pub fn </span>rendezvous_channel&lt;T&gt;() -&gt; (mpsc::SyncSender&lt;T&gt;, mpsc::Receiver&lt;T&gt;) {
-    mpsc::sync_channel(<span class="number">0</span>)
 }
 </code></pre></div></section></main></body></html>

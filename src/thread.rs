@@ -109,7 +109,7 @@ impl JoinGuardScoped<'_> {
         // SAFETY: we cannot move Arc<JoinGuardScoped> into it's
         //   closure JoinGuardScoped is bounded by a borrow of the
         //   same closure thus moving guard into the closure would
-        //   introduce self-referential type which are prohibited
+        //   introduce self-referential type which is prohibited
         unsafe { Arc::new_unchecked(self) }
     }
 }

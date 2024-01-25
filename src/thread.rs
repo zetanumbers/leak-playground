@@ -1,11 +1,13 @@
-use std::marker::PhantomData;
-use std::sync::mpsc;
-use std::{mem, thread};
+use std::thread::JoinHandle;
+use std::{marker::PhantomData, thread};
 
-use crate::{Leak, Unleak};
+use crate::{mem, Leak, Unleak};
 
 /// Handle to a thread, which joins on drop.
+///
 /// Cannot be sent across threads, as opposed to [`JoinGuardScoped`].
+///
+/// To spawn use [`spawn_scoped`].
 pub struct JoinGuard<'a> {
     // using unit as a return value for simplicity
     thread: Option<thread::JoinHandle<()>>,
@@ -17,22 +19,26 @@ pub struct JoinGuard<'a> {
 unsafe impl Send for JoinGuard<'_> where Self: Leak {}
 unsafe impl Sync for JoinGuard<'_> {}
 
-impl<'a> JoinGuard<'a> {
-    pub fn spawn<F>(f: F) -> Self
-    where
-        F: FnOnce() + Send + 'a,
-    {
-        JoinGuard {
-            thread: Some(thread::spawn(unsafe { make_fn_once_static(f) })),
-            _borrow: PhantomData,
-            _unsend: PhantomData,
-        }
+pub fn spawn_scoped<'a, F>(f: F) -> JoinGuard<'a>
+where
+    F: FnOnce() + Send + 'a,
+{
+    JoinGuard {
+        thread: Some(thread::spawn(unsafe { make_fn_once_static(f) })),
+        _borrow: PhantomData,
+        _unsend: PhantomData,
     }
 }
 
 impl JoinGuard<'static> {
     pub fn into_static_scoped(self) -> JoinGuardScoped<'static> {
         JoinGuardScoped { _inner: self }
+    }
+
+    pub fn into_join_handle(mut self) -> JoinHandle<()> {
+        let out = self.thread.take().unwrap();
+        unsafe { mem::forget_unchecked(self) };
+        out
     }
 }
 
@@ -69,7 +75,7 @@ where
     where
         F: 'a,
     {
-        JoinGuard::spawn(self.f.take().expect("Second spawn"))
+        spawn_scoped(self.f.take().expect("Second spawn"))
     }
 }
 
@@ -95,10 +101,6 @@ where
     F: FnMut() + Send + 'a,
 {
     let f: Box<dyn FnMut() + Send + 'a> = Box::new(f);
-    let f: Box<dyn FnMut() + Send> = mem::transmute(f);
+    let f: Box<dyn FnMut() + Send> = core::mem::transmute(f);
     f
-}
-
-pub fn rendezvous_channel<T>() -> (mpsc::SyncSender<T>, mpsc::Receiver<T>) {
-    mpsc::sync_channel(0)
 }

@@ -31,7 +31,7 @@
 //! fn _internal_join_guard_future() -> impl std::future::Future<Output = ()> + Leak {
 //!     async {
 //!         let local = 42;
-//!         let thrd = JoinGuard::spawn({
+//!         let thrd = thread::spawn_scoped({
 //!             let local = &local;
 //!             move || {
 //!                 let _inner_local = local;
@@ -64,8 +64,8 @@
 //!
 //! ```
 //! use leak_playground::*;
-//! let (tx, rx) = rendezvous_channel();
-//! let mut scope = JoinScope::new(move || {
+//! let (tx, rx) = sync::mpsc::rendezvous_channel();
+//! let mut scope = thread::JoinScope::new(move || {
 //!     let _this_thread = rx.recv().unwrap();
 //! });
 //! let thrd = scope.spawn_outside().into_static_scoped();
@@ -77,8 +77,8 @@
 //! ```compile_fail
 //! use leak_playground::*;
 //! let local = 42;
-//! let (tx, rx) = rendezvous_channel();
-//! let mut scope = JoinScope::new({
+//! let (tx, rx) = sync::mpsc::rendezvous_channel();
+//! let mut scope = thread::JoinScope::new({
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx.recv().unwrap();
@@ -94,8 +94,8 @@
 //! ```compile_fail
 //! use leak_playground::*;
 //! let local = 42;
-//! let (tx, rx) = rendezvous_channel();
-//! let mut scope = JoinScope::new({
+//! let (tx, rx) = sync::mpsc::rendezvous_channel();
+//! let mut scope = thread::JoinScope::new({
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx.recv().unwrap();
@@ -112,8 +112,8 @@
 //! use leak_playground::*;
 //! let local = 42;
 //!
-//! let (tx1, rx1) = rendezvous_channel();
-//! let mut scope1 = JoinScope::new({
+//! let (tx1, rx1) = sync::mpsc::rendezvous_channel();
+//! let mut scope1 = thread::JoinScope::new({
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx1.recv().unwrap();
@@ -122,8 +122,8 @@
 //! });
 //! let thrd1 = scope1.spawn();
 //!
-//! let (tx2, rx2) = rendezvous_channel();
-//! let mut scope2 = JoinScope::new({
+//! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
+//! let mut scope2 = thread::JoinScope::new({
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx2.recv().unwrap();
@@ -141,7 +141,7 @@
 //! use leak_playground::*;
 //! let local = 42;
 //!
-//! let mut scope1 = JoinScope::new({
+//! let mut scope1 = thread::JoinScope::new({
 //!     let local = &local;
 //!     move || {
 //!         let _inner_local = local;
@@ -149,8 +149,8 @@
 //! });
 //! let thrd1 = scope1.spawn();
 //!
-//! let (tx2, rx2) = rendezvous_channel();
-//! let mut scope2 = JoinScope::new({
+//! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
+//! let mut scope2 = thread::JoinScope::new({
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx2.recv().unwrap();
@@ -167,7 +167,7 @@
 //! use leak_playground::*;
 //! let local = 42;
 //!
-//! let mut scope1 = JoinScope::new({
+//! let mut scope1 = thread::JoinScope::new({
 //!     let local = &local;
 //!     move || {
 //!         let _inner_local = local;
@@ -175,8 +175,8 @@
 //! });
 //! let thrd1 = scope1.spawn();
 //!
-//! let (tx2, rx2) = rendezvous_channel();
-//! let _thrd2 = JoinGuard::spawn({
+//! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
+//! let _thrd2 = thread::spawn_scoped({
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx2.recv().unwrap();
@@ -186,9 +186,10 @@
 //! tx2.send(thrd1).unwrap();
 //! ```
 
-mod join_guard;
-
-pub use join_guard::*;
+pub mod mem;
+pub mod rc;
+pub mod sync;
+pub mod thread;
 
 /// Proposed `Leak` trait
 ///

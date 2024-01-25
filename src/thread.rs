@@ -1,6 +1,7 @@
 use std::thread::JoinHandle;
 use std::{marker::PhantomData, thread};
 
+use crate::rc::Rc;
 use crate::{mem, Leak, Unleak};
 
 /// Handle to a thread, which joins on drop.
@@ -27,6 +28,14 @@ where
         thread: Some(thread::spawn(unsafe { make_fn_once_static(f) })),
         _borrow: PhantomData,
         _unsend: PhantomData,
+    }
+}
+
+impl JoinGuard<'_> {
+    pub fn into_rc(self) -> Rc<Self> {
+        // SAFETY: we cannot move Rc<JoinGuard> into it's closure because
+        //   impl !Send for Rc<JoinGuard>
+        unsafe { Rc::new_unchecked(self) }
     }
 }
 

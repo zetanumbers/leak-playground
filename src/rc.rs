@@ -13,7 +13,7 @@ pub struct Rc<T> {
 impl<T> Rc<T> {
     pub fn new(x: T) -> Self
     where
-        T: RcSafe,
+        T: Leak,
     {
         Rc {
             inner: StdRc::new(x),
@@ -51,7 +51,7 @@ impl<T> std::ops::Deref for Rc<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &*self.inner
+        &self.inner
     }
 }
 
@@ -78,10 +78,3 @@ impl<T> fmt::Pointer for Rc<T> {
         fmt::Pointer::fmt(&self.inner, f)
     }
 }
-
-/// Indicates whether or not `Rc<Self>` could be safely constructed via
-/// [`Rc::new`].
-// Should this be an auto trait?
-pub unsafe trait RcSafe {}
-
-unsafe impl<T: Leak> RcSafe for T {}

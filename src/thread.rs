@@ -2,6 +2,7 @@ use std::thread::JoinHandle;
 use std::{marker::PhantomData, thread};
 
 use crate::rc::Rc;
+use crate::sync::Arc;
 use crate::{mem, Leak, Unleak};
 
 /// Handle to a thread, which joins on drop.
@@ -88,14 +89,30 @@ where
     }
 }
 
-/// Handle to a thread, which joins on drop.
-/// Can be sent across threads, but is more awkward to use than [`JoinGuard`].
-/// This type is returned by [`JoinScope::spawn`].
+/// Handle to a thread, which joins on drop. Can be sent across threads,
+/// but is more awkward to use than [`JoinGuard`]. This type is returned
+/// by [`JoinScope::spawn`].
 pub struct JoinGuardScoped<'a> {
     _inner: JoinGuard<'a>,
 }
 
 unsafe impl Send for JoinGuardScoped<'_> {}
+
+impl JoinGuardScoped<'_> {
+    pub fn into_rc(self) -> Rc<Self> {
+        // SAFETY: we cannot move Rc<JoinGuardScoped> into it's
+        //   closure because impl !Send for Rc<JoinGuardScoped>
+        unsafe { Rc::new_unchecked(self) }
+    }
+
+    pub fn into_arc(self) -> Arc<Self> {
+        // SAFETY: we cannot move Arc<JoinGuardScoped> into it's
+        //   closure JoinGuardScoped is bounded by a borrow of the
+        //   same closure thus moving guard into the closure would
+        //   introduce self-referential type which are prohibited
+        unsafe { Arc::new_unchecked(self) }
+    }
+}
 
 unsafe fn make_fn_once_static<'a, F>(f: F) -> impl FnOnce() + Send + 'static
 where

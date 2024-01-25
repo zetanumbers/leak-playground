@@ -1,3 +1,5 @@
+mod arc;
+
 pub mod mpsc {
     use std::sync::mpsc;
 
@@ -5,3 +7,5 @@ pub mod mpsc {
         mpsc::sync_channel(0)
     }
 }
+
+pub use arc::*;

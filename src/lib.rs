@@ -24,7 +24,8 @@
 //! This is fine because of the pin's [drop
 //! guarantee](https://doc.rust-lang.org/1.75.0/std/pin/index.html#drop-guarantee).
 //!
-//! **Currently emits an error about unimplemented `Leak`**
+//! **Currently emits an error about unimplemented `Leak` for
+//! internals of rust threads**
 //!
 //! ```
 //! use leak_playground::*;

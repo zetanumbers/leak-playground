@@ -47,6 +47,12 @@ impl JoinGuard<'_> {
         //   impl !Send for Rc<JoinGuard>
         unsafe { Rc::new_unchecked(self) }
     }
+
+    pub fn into_arc(self) -> Arc<Self> {
+        // SAFETY: we cannot move Arc<JoinGuard> into it's closure because
+        //   Arc<JoinGuard>: !Send, or otherwise JoinGuard: Leak
+        unsafe { Arc::new_unchecked(self) }
+    }
 }
 
 impl From<JoinGuard<'static>> for JoinHandle<()> {

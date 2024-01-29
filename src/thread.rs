@@ -1,7 +1,7 @@
 use std::thread::JoinHandle;
 use std::{marker::PhantomData, thread};
 
-use crate::mem::ManuallyDrop;
+use crate::mem::{self, ManuallyDrop};
 use crate::rc::Rc;
 use crate::sync::Arc;
 use crate::{Leak, Unleak};
@@ -37,8 +37,8 @@ where
 ///
 /// To spawn use [`spawn_scoped`].
 pub struct JoinGuard<'a, T> {
-    // using unit as a return value for simplicity
     thread: ManuallyDrop<thread::JoinHandle<T>>,
+
     // not sure about covariance
     _borrow: PhantomData<Unleak<&'a ()>>,
     _unsend: PhantomData<*mut ()>,
@@ -49,7 +49,13 @@ unsafe impl<'a, T> Sync for JoinGuard<'a, T> {}
 
 impl<'a, T> JoinGuard<'a, T> {
     pub fn join(mut self) -> std::thread::Result<T> {
-        unsafe { ManuallyDrop::take(&mut self.thread) }.join()
+        let join_handle;
+        unsafe {
+            join_handle = ManuallyDrop::take(&mut self.thread);
+            // need this to avoid calling `JoinGuard::drop`
+            mem::forget_unchecked(self);
+        }
+        join_handle.join()
     }
 
     pub fn into_rc(self) -> Rc<Self> {
@@ -73,8 +79,18 @@ impl<T> From<JoinGuard<'static, T>> for JoinHandle<T> {
 
 impl<'a, T> Drop for JoinGuard<'a, T> {
     fn drop(&mut self) {
-        // Ignoring error, not propagating, fine in this situation
-        let _ = unsafe { ManuallyDrop::take(&mut self.thread) }.join();
+        let join_handle = unsafe { ManuallyDrop::take(&mut self.thread) };
+        // Shouldn't panic
+        let child = join_handle.thread().clone();
+        // No panic since we guarantee that we would never join on ourselves,
+        // except when `Self: Leak`, then we don't care.
+        let res = join_handle.join();
+        // Propagating panic there since structured parallelism, but ignoring
+        // during panic. Anyway child thread is joined thus either would
+        // be fine.
+        if res.is_err() && !std::thread::panicking() {
+            panic!("child thread {child:?} panicked");
+        }
     }
 }
 

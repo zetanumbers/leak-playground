@@ -135,47 +135,57 @@
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::thread::JoinHandle;
 <span class="kw">use </span>std::{marker::PhantomData, thread};
 
+<span class="kw">use </span><span class="kw">crate</span>::mem::ManuallyDrop;
 <span class="kw">use </span><span class="kw">crate</span>::rc::Rc;
 <span class="kw">use </span><span class="kw">crate</span>::sync::Arc;
 <span class="kw">use crate</span>::{Leak, Unleak};
 
-<span class="doccomment">/// Handle to a thread, which joins on drop.
-///
-/// Cannot be sent across threads, as opposed to [`SendJoinGuard`].
-///
-/// To spawn use [`spawn_scoped`].
-</span><span class="kw">pub struct </span>JoinGuard&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="comment">// using unit as a return value for simplicity
-    </span>thread: <span class="prelude-ty">Option</span>&lt;thread::JoinHandle&lt;()&gt;&gt;,
-    <span class="comment">// not sure about covariance
-    </span>_borrow: PhantomData&lt;Unleak&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>()&gt;&gt;,
-    _unsend: PhantomData&lt;<span class="kw-2">*mut </span>()&gt;,
-}
-
-<span class="kw">unsafe impl </span>Send <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'_</span>&gt; <span class="kw">where </span><span class="self">Self</span>: Leak {}
-<span class="kw">unsafe impl </span>Sync <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'_</span>&gt; {}
-
-<span class="kw">pub fn </span>spawn_scoped&lt;<span class="lifetime">'a</span>, F&gt;(f: F) -&gt; JoinGuard&lt;<span class="lifetime">'a</span>&gt;
+<span class="kw">pub fn </span>spawn_scoped&lt;<span class="lifetime">'a</span>, F, T&gt;(f: F) -&gt; JoinGuard&lt;<span class="lifetime">'a</span>, T&gt;
 <span class="kw">where
-    </span>F: FnOnce() + Send + <span class="lifetime">'a</span>,
+    </span>F: FnOnce() -&gt; T + Send + <span class="lifetime">'a</span>,
+    T: Send + <span class="lifetime">'a</span>,
 {
     JoinGuard {
-        thread: <span class="prelude-val">Some</span>(thread::spawn(<span class="kw">unsafe </span>{ make_fn_once_static(f) })),
+        <span class="comment">// SAFETY: destruction guarantee from `Unleak&lt;&amp;'a ()&gt;` and `T: 'a`
+        </span>thread: <span class="kw">unsafe </span>{
+            ManuallyDrop::new_unchecked(thread::Builder::new().spawn_unchecked(f).unwrap())
+        },
         _borrow: PhantomData,
         _unsend: PhantomData,
     }
 }
 
-<span class="kw">pub fn </span>spawn_borrowed_scoped&lt;<span class="lifetime">'a</span>, F&gt;(f: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>F) -&gt; SendJoinGuard&lt;<span class="lifetime">'a</span>&gt;
+<span class="kw">pub fn </span>spawn_borrowed&lt;<span class="lifetime">'a</span>, F, T&gt;(f: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>F) -&gt; SendJoinGuard&lt;<span class="lifetime">'a</span>, T&gt;
 <span class="kw">where
-    </span>F: FnMut() + Send + <span class="lifetime">'a</span>,
+    </span>F: FnMut() -&gt; T + Send + <span class="lifetime">'a</span>,
+    T: Send + <span class="lifetime">'a</span>,
 {
     SendJoinGuard {
         inner: spawn_scoped(f),
     }
 }
 
-<span class="kw">impl </span>JoinGuard&lt;<span class="lifetime">'_</span>&gt; {
+<span class="doccomment">/// Handle to a thread, which joins on drop.
+///
+/// Cannot be sent across threads, as opposed to [`SendJoinGuard`].
+///
+/// To spawn use [`spawn_scoped`].
+</span><span class="kw">pub struct </span>JoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {
+    <span class="comment">// using unit as a return value for simplicity
+    </span>thread: ManuallyDrop&lt;thread::JoinHandle&lt;T&gt;&gt;,
+    <span class="comment">// not sure about covariance
+    </span>_borrow: PhantomData&lt;Unleak&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>()&gt;&gt;,
+    _unsend: PhantomData&lt;<span class="kw-2">*mut </span>()&gt;,
+}
+
+<span class="kw">unsafe impl</span>&lt;<span class="lifetime">'a</span>, T&gt; Send <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'a</span>, T&gt; <span class="kw">where </span><span class="self">Self</span>: Leak {}
+<span class="kw">unsafe impl</span>&lt;<span class="lifetime">'a</span>, T&gt; Sync <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; JoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {
+    <span class="kw">pub fn </span>join(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; std::thread::Result&lt;T&gt; {
+        <span class="kw">unsafe </span>{ ManuallyDrop::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.thread) }.join()
+    }
+
     <span class="kw">pub fn </span>into_rc(<span class="self">self</span>) -&gt; Rc&lt;<span class="self">Self</span>&gt; {
         <span class="comment">// SAFETY: we cannot move Rc&lt;JoinGuard&gt; into it's closure because
         //   impl !Send for Rc&lt;JoinGuard&gt;
@@ -189,29 +199,36 @@
     }
 }
 
-<span class="kw">impl </span>From&lt;JoinGuard&lt;<span class="lifetime">'static</span>&gt;&gt; <span class="kw">for </span>JoinHandle&lt;()&gt; {
-    <span class="kw">fn </span>from(<span class="kw-2">mut </span>value: JoinGuard&lt;<span class="lifetime">'static</span>&gt;) -&gt; <span class="self">Self </span>{
-        value.thread.take().unwrap()
+<span class="kw">impl</span>&lt;T&gt; From&lt;JoinGuard&lt;<span class="lifetime">'static</span>, T&gt;&gt; <span class="kw">for </span>JoinHandle&lt;T&gt; {
+    <span class="kw">fn </span>from(<span class="kw-2">mut </span>value: JoinGuard&lt;<span class="lifetime">'static</span>, T&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">unsafe </span>{ ManuallyDrop::take(<span class="kw-2">&amp;mut </span>value.thread) }
     }
 }
 
-<span class="kw">impl </span>Drop <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'_</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; Drop <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="comment">// Ignoring error, not propagating, fine in this situation
-        </span><span class="kw">let _ </span>= <span class="self">self</span>.thread.take().unwrap().join();
+        </span><span class="kw">let _ </span>= <span class="kw">unsafe </span>{ ManuallyDrop::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.thread) }.join();
     }
 }
 
-<span class="doccomment">/// Handle to a thread, which joins on drop. Can be sent across threads,
-/// but is more awkward to use than [`JoinGuard`]. This type is returned
-/// by [`spawn_borrowed_scoped`].
-</span><span class="kw">pub struct </span>SendJoinGuard&lt;<span class="lifetime">'a</span>&gt; {
-    inner: JoinGuard&lt;<span class="lifetime">'a</span>&gt;,
+<span class="doccomment">/// Handle to a thread, which joins on drop. Implements [`Send`].
+///
+/// Can be sent across threads, but is more awkward to use than
+/// [`JoinGuard`].
+///
+/// To spawn use [`spawn_borrowed`].
+</span><span class="kw">pub struct </span>SendJoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {
+    inner: JoinGuard&lt;<span class="lifetime">'a</span>, T&gt;,
 }
 
-<span class="kw">unsafe impl </span>Send <span class="kw">for </span>SendJoinGuard&lt;<span class="lifetime">'_</span>&gt; {}
+<span class="kw">unsafe impl</span>&lt;<span class="lifetime">'a</span>, T&gt; Send <span class="kw">for </span>SendJoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {}
 
-<span class="kw">impl </span>SendJoinGuard&lt;<span class="lifetime">'_</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; SendJoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {
+    <span class="kw">pub fn </span>join(<span class="self">self</span>) -&gt; std::thread::Result&lt;T&gt; {
+        <span class="self">self</span>.inner.join()
+    }
+
     <span class="kw">pub fn </span>into_rc(<span class="self">self</span>) -&gt; Rc&lt;<span class="self">Self</span>&gt; {
         <span class="comment">// SAFETY: we cannot move Rc&lt;SendJoinGuard&gt; into it's
         //   closure because impl !Send for Rc&lt;SendJoinGuard&gt;
@@ -227,41 +244,24 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;JoinGuard&lt;<span class="lifetime">'a</span>&gt;&gt; <span class="kw">for </span>SendJoinGuard&lt;<span class="lifetime">'a</span>&gt;
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; From&lt;JoinGuard&lt;<span class="lifetime">'a</span>, T&gt;&gt; <span class="kw">for </span>SendJoinGuard&lt;<span class="lifetime">'a</span>, T&gt;
 <span class="kw">where
-    </span>JoinGuard&lt;<span class="lifetime">'a</span>&gt;: Leak,
+    </span>JoinGuard&lt;<span class="lifetime">'a</span>, T&gt;: Leak,
 {
-    <span class="kw">fn </span>from(inner: JoinGuard&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>from(inner: JoinGuard&lt;<span class="lifetime">'a</span>, T&gt;) -&gt; <span class="self">Self </span>{
         SendJoinGuard { inner }
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;SendJoinGuard&lt;<span class="lifetime">'a</span>&gt;&gt; <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>from(value: SendJoinGuard&lt;<span class="lifetime">'a</span>&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; From&lt;SendJoinGuard&lt;<span class="lifetime">'a</span>, T&gt;&gt; <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {
+    <span class="kw">fn </span>from(value: SendJoinGuard&lt;<span class="lifetime">'a</span>, T&gt;) -&gt; <span class="self">Self </span>{
         value.inner
     }
 }
 
-<span class="kw">impl </span>From&lt;SendJoinGuard&lt;<span class="lifetime">'static</span>&gt;&gt; <span class="kw">for </span>JoinHandle&lt;()&gt; {
-    <span class="kw">fn </span>from(value: SendJoinGuard&lt;<span class="lifetime">'static</span>&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;T&gt; From&lt;SendJoinGuard&lt;<span class="lifetime">'static</span>, T&gt;&gt; <span class="kw">for </span>JoinHandle&lt;T&gt; {
+    <span class="kw">fn </span>from(value: SendJoinGuard&lt;<span class="lifetime">'static</span>, T&gt;) -&gt; <span class="self">Self </span>{
         value.inner.into()
     }
-}
-
-<span class="kw">unsafe fn </span>make_fn_once_static&lt;<span class="lifetime">'a</span>, F&gt;(f: F) -&gt; <span class="kw">impl </span>FnOnce() + Send + <span class="lifetime">'static
-</span><span class="kw">where
-    </span>F: FnOnce() + Send + <span class="lifetime">'a</span>,
-{
-    <span class="kw">let </span><span class="kw-2">mut </span>f = <span class="prelude-val">Some</span>(f);
-    make_fn_mut_static(<span class="kw">move </span>|| (f.take().unwrap())())
-}
-
-<span class="kw">unsafe fn </span>make_fn_mut_static&lt;<span class="lifetime">'a</span>, F&gt;(f: F) -&gt; <span class="kw">impl </span>FnMut() + Send + <span class="lifetime">'static
-</span><span class="kw">where
-    </span>F: FnMut() + Send + <span class="lifetime">'a</span>,
-{
-    <span class="kw">let </span>f: Box&lt;<span class="kw">dyn </span>FnMut() + Send + <span class="lifetime">'a</span>&gt; = Box::new(f);
-    <span class="kw">let </span>f: Box&lt;<span class="kw">dyn </span>FnMut() + Send&gt; = core::mem::transmute(f);
-    f
 }
 </code></pre></div></section></main></body></html>

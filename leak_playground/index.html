@@ -60,7 +60,7 @@ tx.send(thrd).unwrap();</code></pre></div>
         <span class="kw">let </span>_inner_local = local;
     }
 };
-<span class="kw">let </span>thrd = thread::spawn_borrowed_scoped(<span class="kw-2">&amp;mut </span>f);
+<span class="kw">let </span>thrd = thread::spawn_borrowed(<span class="kw-2">&amp;mut </span>f);
 tx.send(thrd).unwrap();
 drop(tx);</code></pre></div>
 <h4 id="two-step-self-ownership"><a class="doc-anchor" href="#two-step-self-ownership">§</a>Two-step self ownership</h4>
@@ -75,7 +75,7 @@ drop(tx);</code></pre></div>
         <span class="kw">let </span>_inner_local = local;
     }
 };
-<span class="kw">let </span>thrd1 = thread::spawn_borrowed_scoped(<span class="kw-2">&amp;mut </span>f1);
+<span class="kw">let </span>thrd1 = thread::spawn_borrowed(<span class="kw-2">&amp;mut </span>f1);
 
 <span class="kw">let </span>(tx2, rx2) = sync::mpsc::rendezvous_channel();
 <span class="kw">let </span><span class="kw-2">mut </span>f2 = {
@@ -85,7 +85,7 @@ drop(tx);</code></pre></div>
         <span class="kw">let </span>_inner_local = local;
     }
 };
-<span class="kw">let </span>thrd2 = thread::spawn_borrowed_scoped(<span class="kw-2">&amp;mut </span>f2);
+<span class="kw">let </span>thrd2 = thread::spawn_borrowed(<span class="kw-2">&amp;mut </span>f2);
 tx1.send(thrd2).unwrap();
 drop(tx1);
 tx2.send(thrd1).unwrap();
@@ -97,7 +97,7 @@ drop(tx2);</code></pre></div>
 <span class="kw">let </span><span class="kw-2">mut </span>f1 = || {
     <span class="kw">let </span>_inner_local = <span class="kw-2">&amp;</span>local;
 };
-<span class="kw">let </span>thrd1 = thread::spawn_borrowed_scoped(<span class="kw-2">&amp;mut </span>f1);
+<span class="kw">let </span>thrd1 = thread::spawn_borrowed(<span class="kw-2">&amp;mut </span>f1);
 
 <span class="kw">let </span>(tx2, rx2) = sync::mpsc::rendezvous_channel();
 <span class="kw">let </span><span class="kw-2">mut </span>f2 = {
@@ -107,7 +107,7 @@ drop(tx2);</code></pre></div>
         <span class="kw">let </span>_inner_local = local;
     }
 };
-<span class="kw">let </span>_thrd2 = thread::spawn_borrowed_scoped(<span class="kw-2">&amp;mut </span>f2);
+<span class="kw">let </span>_thrd2 = thread::spawn_borrowed(<span class="kw-2">&amp;mut </span>f2);
 tx2.send(thrd1).unwrap();
 drop(tx2);</code></pre></div>
 <h4 id="nested-mixed-ownership-without-cycles"><a class="doc-anchor" href="#nested-mixed-ownership-without-cycles">§</a>Nested mixed ownership without cycles</h4>
@@ -117,7 +117,7 @@ drop(tx2);</code></pre></div>
 <span class="kw">let </span><span class="kw-2">mut </span>f1 = || {
     <span class="kw">let </span>_inner_local = <span class="kw-2">&amp;</span>local;
 };
-<span class="kw">let </span>thrd1 = thread::spawn_borrowed_scoped(<span class="kw-2">&amp;mut </span>f1);
+<span class="kw">let </span>thrd1 = thread::spawn_borrowed(<span class="kw-2">&amp;mut </span>f1);
 
 <span class="kw">let </span>(tx2, rx2) = sync::mpsc::rendezvous_channel();
 <span class="kw">let </span>_thrd2 = thread::spawn_scoped({

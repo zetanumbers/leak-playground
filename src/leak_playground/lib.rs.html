@@ -215,7 +215,7 @@
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
-</pre></div><pre class="rust"><code><span class="attr">#![feature(auto_traits, negative_impls)]
+</pre></div><pre class="rust"><code><span class="attr">#![feature(auto_traits, negative_impls, thread_spawn_unchecked)]
 </span><span class="doccomment">//! # Examples
 //!
 //! ## Futures
@@ -301,7 +301,7 @@
 //!         let _inner_local = local;
 //!     }
 //! };
-//! let thrd = thread::spawn_borrowed_scoped(&amp;mut f);
+//! let thrd = thread::spawn_borrowed(&amp;mut f);
 //! tx.send(thrd).unwrap();
 //! drop(tx);
 //! ```
@@ -320,7 +320,7 @@
 //!         let _inner_local = local;
 //!     }
 //! };
-//! let thrd1 = thread::spawn_borrowed_scoped(&amp;mut f1);
+//! let thrd1 = thread::spawn_borrowed(&amp;mut f1);
 //!
 //! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
 //! let mut f2 = {
@@ -330,7 +330,7 @@
 //!         let _inner_local = local;
 //!     }
 //! };
-//! let thrd2 = thread::spawn_borrowed_scoped(&amp;mut f2);
+//! let thrd2 = thread::spawn_borrowed(&amp;mut f2);
 //! tx1.send(thrd2).unwrap();
 //! drop(tx1);
 //! tx2.send(thrd1).unwrap();
@@ -346,7 +346,7 @@
 //! let mut f1 = || {
 //!     let _inner_local = &amp;local;
 //! };
-//! let thrd1 = thread::spawn_borrowed_scoped(&amp;mut f1);
+//! let thrd1 = thread::spawn_borrowed(&amp;mut f1);
 //!
 //! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
 //! let mut f2 = {
@@ -356,7 +356,7 @@
 //!         let _inner_local = local;
 //!     }
 //! };
-//! let _thrd2 = thread::spawn_borrowed_scoped(&amp;mut f2);
+//! let _thrd2 = thread::spawn_borrowed(&amp;mut f2);
 //! tx2.send(thrd1).unwrap();
 //! drop(tx2);
 //! ```
@@ -370,7 +370,7 @@
 //! let mut f1 = || {
 //!     let _inner_local = &amp;local;
 //! };
-//! let thrd1 = thread::spawn_borrowed_scoped(&amp;mut f1);
+//! let thrd1 = thread::spawn_borrowed(&amp;mut f1);
 //!
 //! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
 //! let _thrd2 = thread::spawn_scoped({

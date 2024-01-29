@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["forget","forget_unchecked"]};
+window.SIDEBAR_ITEMS = {"fn":["forget","forget_unchecked"],"struct":["ManuallyDrop"]};

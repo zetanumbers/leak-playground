@@ -74,9 +74,12 @@ impl<'a, T> Drop for JoinGuard<'a, T> {
     }
 }
 
-/// Handle to a thread, which joins on drop. Can be sent across threads,
-/// but is more awkward to use than [`JoinGuard`]. This type is returned
-/// by [`spawn_borrowed_scoped`].
+/// Handle to a thread, which joins on drop. Implements [`Send`].
+///
+/// Can be sent across threads, but is more awkward to use than
+/// [`JoinGuard`].
+///
+/// To spawn use [`spawn_borrowed_scoped`].
 pub struct SendJoinGuard<'a, T> {
     inner: JoinGuard<'a, T>,
 }

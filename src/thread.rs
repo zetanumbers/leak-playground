@@ -1,6 +1,7 @@
 use std::thread::JoinHandle;
 use std::{marker::PhantomData, thread};
 
+use crate::mem::ManuallyDrop;
 use crate::rc::Rc;
 use crate::sync::Arc;
 use crate::{Leak, Unleak};
@@ -11,7 +12,10 @@ where
     T: Send + 'a,
 {
     JoinGuard {
-        thread: Some(unsafe { thread::Builder::new().spawn_unchecked(f).unwrap() }),
+        // SAFETY: destruction guarantee from `Unleak<&'a ()>` and `T: 'a`
+        thread: unsafe {
+            ManuallyDrop::new_unchecked(thread::Builder::new().spawn_unchecked(f).unwrap())
+        },
         _borrow: PhantomData,
         _unsend: PhantomData,
     }
@@ -34,7 +38,7 @@ where
 /// To spawn use [`spawn_scoped`].
 pub struct JoinGuard<'a, T> {
     // using unit as a return value for simplicity
-    thread: Option<thread::JoinHandle<T>>,
+    thread: ManuallyDrop<thread::JoinHandle<T>>,
     // not sure about covariance
     _borrow: PhantomData<Unleak<&'a ()>>,
     _unsend: PhantomData<*mut ()>,
@@ -45,7 +49,7 @@ unsafe impl<'a, T> Sync for JoinGuard<'a, T> {}
 
 impl<'a, T> JoinGuard<'a, T> {
     pub fn join(mut self) -> std::thread::Result<T> {
-        self.thread.take().unwrap().join()
+        unsafe { ManuallyDrop::take(&mut self.thread) }.join()
     }
 
     pub fn into_rc(self) -> Rc<Self> {
@@ -63,14 +67,14 @@ impl<'a, T> JoinGuard<'a, T> {
 
 impl<T> From<JoinGuard<'static, T>> for JoinHandle<T> {
     fn from(mut value: JoinGuard<'static, T>) -> Self {
-        value.thread.take().unwrap()
+        unsafe { ManuallyDrop::take(&mut value.thread) }
     }
 }
 
 impl<'a, T> Drop for JoinGuard<'a, T> {
     fn drop(&mut self) {
         // Ignoring error, not propagating, fine in this situation
-        let _ = self.thread.take().unwrap().join();
+        let _ = unsafe { ManuallyDrop::take(&mut self.thread) }.join();
     }
 }
 

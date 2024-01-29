@@ -65,10 +65,9 @@
 //! ```
 //! use leak_playground::*;
 //! let (tx, rx) = sync::mpsc::rendezvous_channel();
-//! let mut scope = thread::JoinScope::new(move || {
+//! let thrd = thread::spawn_scoped(move || {
 //!     let _this_thread = rx.recv().unwrap();
-//! });
-//! let thrd = scope.spawn_outside().into_static_scoped();
+//! }).into_static_scoped();
 //! tx.send(thrd).unwrap();
 //! ```
 //!
@@ -78,14 +77,13 @@
 //! use leak_playground::*;
 //! let local = 42;
 //! let (tx, rx) = sync::mpsc::rendezvous_channel();
-//! let mut scope = thread::JoinScope::new({
+//! let thrd = thread::spawn_scoped({
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx.recv().unwrap();
 //!         let inner_local = local;
 //!     }
-//! });
-//! let thrd = scope.spawn_outside().into_static_scoped();
+//! }).into_static_scoped();
 //! tx.send(thrd).unwrap();
 //! ```
 //!

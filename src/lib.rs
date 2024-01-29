@@ -1,4 +1,4 @@
-#![feature(auto_traits, negative_impls)]
+#![feature(auto_traits, negative_impls, thread_spawn_unchecked)]
 //! # Examples
 //!
 //! ## Futures

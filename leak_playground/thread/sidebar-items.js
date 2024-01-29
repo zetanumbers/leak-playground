@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["spawn_scoped"],"struct":["JoinGuard","JoinGuardScoped","JoinScope"]};
+window.SIDEBAR_ITEMS = {"fn":["spawn_borrowed_scoped","spawn_scoped"],"struct":["JoinGuard","SendJoinGuard"]};

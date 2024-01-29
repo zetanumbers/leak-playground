@@ -10,6 +10,7 @@ pub unsafe fn forget_unchecked<T>(x: T) {
     mem::forget(x)
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct ManuallyDrop<T: ?Sized> {
     inner: mem::ManuallyDrop<T>,
@@ -33,5 +34,19 @@ impl<T> ManuallyDrop<T> {
 
     pub unsafe fn take(slot: &mut ManuallyDrop<T>) -> T {
         mem::ManuallyDrop::take(&mut slot.inner)
+    }
+}
+
+impl<T: ?Sized> std::ops::DerefMut for ManuallyDrop<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl<T: ?Sized> std::ops::Deref for ManuallyDrop<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }

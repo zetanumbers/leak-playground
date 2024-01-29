@@ -13,7 +13,7 @@ where
 {
     JoinGuard {
         // SAFETY: destruction guarantee from `Unleak<&'a ()>` and `T: 'a`
-        thread: unsafe {
+        child: unsafe {
             ManuallyDrop::new_unchecked(thread::Builder::new().spawn_unchecked(f).unwrap())
         },
         _borrow: PhantomData,
@@ -37,7 +37,7 @@ where
 ///
 /// To spawn use [`spawn_scoped`].
 pub struct JoinGuard<'a, T> {
-    thread: ManuallyDrop<thread::JoinHandle<T>>,
+    child: ManuallyDrop<thread::JoinHandle<T>>,
 
     // not sure about covariance
     _borrow: PhantomData<Unleak<&'a ()>>,
@@ -50,12 +50,21 @@ unsafe impl<'a, T> Sync for JoinGuard<'a, T> {}
 impl<'a, T> JoinGuard<'a, T> {
     pub fn join(mut self) -> std::thread::Result<T> {
         let join_handle;
+        // SAFETY: we immediatelly join after
         unsafe {
-            join_handle = ManuallyDrop::take(&mut self.thread);
+            join_handle = ManuallyDrop::take(&mut self.child);
             // need this to avoid calling `JoinGuard::drop`
             mem::forget_unchecked(self);
         }
         join_handle.join()
+    }
+
+    pub fn thread(&self) -> &std::thread::Thread {
+        self.child.thread()
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.child.is_finished()
     }
 
     pub fn into_rc(self) -> Rc<Self> {
@@ -71,15 +80,25 @@ impl<'a, T> JoinGuard<'a, T> {
     }
 }
 
+impl<T> JoinGuard<'static, T> {
+    pub fn into_handle(self) -> JoinHandle<T> {
+        self.into()
+    }
+
+    pub fn detach(self) {
+        let _ = self.into_handle();
+    }
+}
+
 impl<T> From<JoinGuard<'static, T>> for JoinHandle<T> {
     fn from(mut value: JoinGuard<'static, T>) -> Self {
-        unsafe { ManuallyDrop::take(&mut value.thread) }
+        unsafe { ManuallyDrop::take(&mut value.child) }
     }
 }
 
 impl<'a, T> Drop for JoinGuard<'a, T> {
     fn drop(&mut self) {
-        let join_handle = unsafe { ManuallyDrop::take(&mut self.thread) };
+        let join_handle = unsafe { ManuallyDrop::take(&mut self.child) };
         // Shouldn't panic
         let child = join_handle.thread().clone();
         // No panic since we guarantee that we would never join on ourselves,
@@ -111,6 +130,14 @@ impl<'a, T> SendJoinGuard<'a, T> {
         self.inner.join()
     }
 
+    pub fn thread(&self) -> &std::thread::Thread {
+        self.inner.thread()
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.inner.is_finished()
+    }
+
     pub fn into_rc(self) -> Rc<Self> {
         // SAFETY: we cannot move Rc<SendJoinGuard> into it's
         //   closure because impl !Send for Rc<SendJoinGuard>
@@ -123,6 +150,16 @@ impl<'a, T> SendJoinGuard<'a, T> {
         //   same closure thus moving guard into the closure would
         //   introduce self-referential type which is prohibited
         unsafe { Arc::new_unchecked(self) }
+    }
+}
+
+impl<T> SendJoinGuard<'static, T> {
+    pub fn into_handle(self) -> JoinHandle<T> {
+        self.into()
+    }
+
+    pub fn detach(self) {
+        let _ = self.into_handle();
     }
 }
 

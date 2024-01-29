@@ -24,8 +24,7 @@
 //! This is fine because of the pin's [drop
 //! guarantee](https://doc.rust-lang.org/1.75.0/std/pin/index.html#drop-guarantee).
 //!
-//! **Currently emits an error about unimplemented `Leak` for
-//! internals of rust threads**
+//! **Currently emits "higher-ranked lifetime error"**
 //!
 //! ```
 //! use leak_playground::*;
@@ -225,3 +224,12 @@ unsafe impl<T: 'static> Leak for Unleak<T> {}
 struct PhantomStaticUnleak;
 
 impl !Leak for PhantomStaticUnleak {}
+
+// SAFETY: borrows don't own anything
+unsafe impl<T> Leak for &T {}
+unsafe impl<T> Leak for &mut T {}
+
+// Workaround impls since we aren't inside of std
+
+// SAFETY: it is always safe to leak JoinHandle
+unsafe impl<T: 'static> Leak for std::thread::JoinHandle<T> {}

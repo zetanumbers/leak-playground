@@ -67,41 +67,26 @@
 //! let (tx, rx) = sync::mpsc::rendezvous_channel();
 //! let thrd = thread::spawn_scoped(move || {
 //!     let _this_thread = rx.recv().unwrap();
-//! }).into_static_scoped();
+//! });
 //! tx.send(thrd).unwrap();
 //! ```
 //!
-//! ### Non-static JoinGuard uses static methods
+//! ### Self ownership of SendJoinGuard
 //!
 //! ```compile_fail
 //! use leak_playground::*;
 //! let local = 42;
 //! let (tx, rx) = sync::mpsc::rendezvous_channel();
-//! let thrd = thread::spawn_scoped({
-//!     let local = &local;
-//!     move || {
-//!         let _this_thread = rx.recv().unwrap();
-//!         let inner_local = local;
-//!     }
-//! }).into_static_scoped();
-//! tx.send(thrd).unwrap();
-//! ```
-//!
-//! ### Self ownership of JoinGuardScoped
-//!
-//! ```compile_fail
-//! use leak_playground::*;
-//! let local = 42;
-//! let (tx, rx) = sync::mpsc::rendezvous_channel();
-//! let mut scope = thread::JoinScope::new({
+//! let mut f = {
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx.recv().unwrap();
 //!         let _inner_local = local;
 //!     }
-//! });
-//! let thrd = scope.spawn();
+//! };
+//! let thrd = thread::spawn_borrowed_scoped(&mut f);
 //! tx.send(thrd).unwrap();
+//! drop(tx);
 //! ```
 //!
 //! ### Two-step self ownership
@@ -111,26 +96,28 @@
 //! let local = 42;
 //!
 //! let (tx1, rx1) = sync::mpsc::rendezvous_channel();
-//! let mut scope1 = thread::JoinScope::new({
+//! let mut f1 = {
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx1.recv().unwrap();
 //!         let _inner_local = local;
 //!     }
-//! });
-//! let thrd1 = scope1.spawn();
+//! };
+//! let thrd1 = thread::spawn_borrowed_scoped(&mut f1);
 //!
 //! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
-//! let mut scope2 = thread::JoinScope::new({
+//! let mut f2 = {
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx2.recv().unwrap();
 //!         let _inner_local = local;
 //!     }
-//! });
-//! let thrd2 = scope2.spawn();
+//! };
+//! let thrd2 = thread::spawn_borrowed_scoped(&mut f2);
 //! tx1.send(thrd2).unwrap();
+//! drop(tx1);
 //! tx2.send(thrd1).unwrap();
+//! drop(tx2);
 //! ```
 //!
 //! ### Nested ownership without cycles
@@ -139,24 +126,22 @@
 //! use leak_playground::*;
 //! let local = 42;
 //!
-//! let mut scope1 = thread::JoinScope::new({
-//!     let local = &local;
-//!     move || {
-//!         let _inner_local = local;
-//!     }
-//! });
-//! let thrd1 = scope1.spawn();
+//! let mut f1 = || {
+//!     let _inner_local = &local;
+//! };
+//! let thrd1 = thread::spawn_borrowed_scoped(&mut f1);
 //!
 //! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
-//! let mut scope2 = thread::JoinScope::new({
+//! let mut f2 = {
 //!     let local = &local;
 //!     move || {
 //!         let _this_thread = rx2.recv().unwrap();
 //!         let _inner_local = local;
 //!     }
-//! });
-//! let _thrd2 = scope2.spawn();
+//! };
+//! let _thrd2 = thread::spawn_borrowed_scoped(&mut f2);
 //! tx2.send(thrd1).unwrap();
+//! drop(tx2);
 //! ```
 //!
 //! ### Nested mixed ownership without cycles
@@ -165,13 +150,10 @@
 //! use leak_playground::*;
 //! let local = 42;
 //!
-//! let mut scope1 = thread::JoinScope::new({
-//!     let local = &local;
-//!     move || {
-//!         let _inner_local = local;
-//!     }
-//! });
-//! let thrd1 = scope1.spawn();
+//! let mut f1 = || {
+//!     let _inner_local = &local;
+//! };
+//! let thrd1 = thread::spawn_borrowed_scoped(&mut f1);
 //!
 //! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
 //! let _thrd2 = thread::spawn_scoped({

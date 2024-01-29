@@ -3,18 +3,18 @@ use std::{marker::PhantomData, thread};
 
 use crate::rc::Rc;
 use crate::sync::Arc;
-use crate::{mem, Leak, Unleak};
+use crate::{Leak, Unleak};
 
 /// Handle to a thread, which joins on drop.
 ///
-/// Cannot be sent across threads, as opposed to [`JoinGuardScoped`].
+/// Cannot be sent across threads, as opposed to [`SendJoinGuard`].
 ///
 /// To spawn use [`spawn_scoped`].
 pub struct JoinGuard<'a> {
     // using unit as a return value for simplicity
     thread: Option<thread::JoinHandle<()>>,
-    // not sure about invariance
-    _borrow: PhantomData<Unleak<&'a mut &'a ()>>,
+    // not sure about covariance
+    _borrow: PhantomData<Unleak<&'a mut ()>>,
     _unsend: PhantomData<*mut ()>,
 }
 
@@ -32,6 +32,15 @@ where
     }
 }
 
+pub fn spawn_borrowed_scoped<'a, F>(f: &'a mut F) -> SendJoinGuard<'a>
+where
+    F: FnMut() + Send + 'a,
+{
+    SendJoinGuard {
+        inner: spawn_scoped(f),
+    }
+}
+
 impl JoinGuard<'_> {
     pub fn into_rc(self) -> Rc<Self> {
         // SAFETY: we cannot move Rc<JoinGuard> into it's closure because
@@ -40,15 +49,9 @@ impl JoinGuard<'_> {
     }
 }
 
-impl JoinGuard<'static> {
-    pub fn into_static_scoped(self) -> JoinGuardScoped<'static> {
-        JoinGuardScoped { _inner: self }
-    }
-
-    pub fn into_join_handle(mut self) -> JoinHandle<()> {
-        let out = self.thread.take().unwrap();
-        unsafe { mem::forget_unchecked(self) };
-        out
+impl From<JoinGuard<'static>> for JoinHandle<()> {
+    fn from(mut value: JoinGuard<'static>) -> Self {
+        value.thread.take().unwrap()
     }
 }
 
@@ -59,58 +62,49 @@ impl Drop for JoinGuard<'_> {
     }
 }
 
-pub struct JoinScope<F> {
-    f: Option<F>,
-}
-
-impl<F> JoinScope<F> {
-    pub fn new(f: F) -> Self {
-        JoinScope { f: Some(f) }
-    }
-}
-
-impl<F> JoinScope<F>
-where
-    F: FnOnce() + Send,
-{
-    #[track_caller]
-    pub fn spawn(&mut self) -> JoinGuardScoped<'_> {
-        JoinGuardScoped {
-            _inner: self.spawn_outside(),
-        }
-    }
-
-    #[track_caller]
-    pub fn spawn_outside<'a>(&mut self) -> JoinGuard<'a>
-    where
-        F: 'a,
-    {
-        spawn_scoped(self.f.take().expect("Second spawn"))
-    }
-}
-
 /// Handle to a thread, which joins on drop. Can be sent across threads,
 /// but is more awkward to use than [`JoinGuard`]. This type is returned
-/// by [`JoinScope::spawn`].
-pub struct JoinGuardScoped<'a> {
-    _inner: JoinGuard<'a>,
+/// by [`spawn_borrowed_scoped`].
+pub struct SendJoinGuard<'a> {
+    inner: JoinGuard<'a>,
 }
 
-unsafe impl Send for JoinGuardScoped<'_> {}
+unsafe impl Send for SendJoinGuard<'_> {}
 
-impl JoinGuardScoped<'_> {
+impl SendJoinGuard<'_> {
     pub fn into_rc(self) -> Rc<Self> {
-        // SAFETY: we cannot move Rc<JoinGuardScoped> into it's
-        //   closure because impl !Send for Rc<JoinGuardScoped>
+        // SAFETY: we cannot move Rc<SendJoinGuard> into it's
+        //   closure because impl !Send for Rc<SendJoinGuard>
         unsafe { Rc::new_unchecked(self) }
     }
 
     pub fn into_arc(self) -> Arc<Self> {
-        // SAFETY: we cannot move Arc<JoinGuardScoped> into it's
-        //   closure JoinGuardScoped is bounded by a borrow of the
+        // SAFETY: we cannot move Arc<SendJoinGuard> into it's
+        //   closure SendJoinGuard is bounded by a borrow of the
         //   same closure thus moving guard into the closure would
         //   introduce self-referential type which is prohibited
         unsafe { Arc::new_unchecked(self) }
+    }
+}
+
+impl<'a> From<JoinGuard<'a>> for SendJoinGuard<'a>
+where
+    JoinGuard<'a>: Leak,
+{
+    fn from(inner: JoinGuard<'a>) -> Self {
+        SendJoinGuard { inner }
+    }
+}
+
+impl<'a> From<SendJoinGuard<'a>> for JoinGuard<'a> {
+    fn from(value: SendJoinGuard<'a>) -> Self {
+        value.inner
+    }
+}
+
+impl From<SendJoinGuard<'static>> for JoinHandle<()> {
+    fn from(value: SendJoinGuard<'static>) -> Self {
+        value.inner.into()
     }
 }
 

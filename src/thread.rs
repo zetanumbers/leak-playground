@@ -21,7 +21,7 @@ where
     }
 }
 
-pub fn spawn_borrowed_scoped<'a, F, T>(f: &'a mut F) -> SendJoinGuard<'a, T>
+pub fn spawn_borrowed<'a, F, T>(f: &'a mut F) -> SendJoinGuard<'a, T>
 where
     F: FnMut() -> T + Send + 'a,
     T: Send + 'a,
@@ -83,7 +83,7 @@ impl<'a, T> Drop for JoinGuard<'a, T> {
 /// Can be sent across threads, but is more awkward to use than
 /// [`JoinGuard`].
 ///
-/// To spawn use [`spawn_borrowed_scoped`].
+/// To spawn use [`spawn_borrowed`].
 pub struct SendJoinGuard<'a, T> {
     inner: JoinGuard<'a, T>,
 }

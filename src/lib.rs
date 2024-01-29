@@ -84,7 +84,7 @@
 //!         let _inner_local = local;
 //!     }
 //! };
-//! let thrd = thread::spawn_borrowed_scoped(&mut f);
+//! let thrd = thread::spawn_borrowed(&mut f);
 //! tx.send(thrd).unwrap();
 //! drop(tx);
 //! ```
@@ -103,7 +103,7 @@
 //!         let _inner_local = local;
 //!     }
 //! };
-//! let thrd1 = thread::spawn_borrowed_scoped(&mut f1);
+//! let thrd1 = thread::spawn_borrowed(&mut f1);
 //!
 //! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
 //! let mut f2 = {
@@ -113,7 +113,7 @@
 //!         let _inner_local = local;
 //!     }
 //! };
-//! let thrd2 = thread::spawn_borrowed_scoped(&mut f2);
+//! let thrd2 = thread::spawn_borrowed(&mut f2);
 //! tx1.send(thrd2).unwrap();
 //! drop(tx1);
 //! tx2.send(thrd1).unwrap();
@@ -129,7 +129,7 @@
 //! let mut f1 = || {
 //!     let _inner_local = &local;
 //! };
-//! let thrd1 = thread::spawn_borrowed_scoped(&mut f1);
+//! let thrd1 = thread::spawn_borrowed(&mut f1);
 //!
 //! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
 //! let mut f2 = {
@@ -139,7 +139,7 @@
 //!         let _inner_local = local;
 //!     }
 //! };
-//! let _thrd2 = thread::spawn_borrowed_scoped(&mut f2);
+//! let _thrd2 = thread::spawn_borrowed(&mut f2);
 //! tx2.send(thrd1).unwrap();
 //! drop(tx2);
 //! ```
@@ -153,7 +153,7 @@
 //! let mut f1 = || {
 //!     let _inner_local = &local;
 //! };
-//! let thrd1 = thread::spawn_borrowed_scoped(&mut f1);
+//! let thrd1 = thread::spawn_borrowed(&mut f1);
 //!
 //! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
 //! let _thrd2 = thread::spawn_scoped({

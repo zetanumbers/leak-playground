@@ -50,7 +50,7 @@ unsafe impl<'a, T> Sync for JoinGuard<'a, T> {}
 impl<'a, T> JoinGuard<'a, T> {
     pub fn join(mut self) -> std::thread::Result<T> {
         let join_handle;
-        // SAFETY: we immediatelly join after
+        // SAFETY: we immediately, join after
         unsafe {
             join_handle = ManuallyDrop::take(&mut self.child);
             // need this to avoid calling `JoinGuard::drop`

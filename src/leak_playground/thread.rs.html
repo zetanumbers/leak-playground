@@ -132,10 +132,63 @@
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::thread::JoinHandle;
 <span class="kw">use </span>std::{marker::PhantomData, thread};
 
-<span class="kw">use </span><span class="kw">crate</span>::mem::ManuallyDrop;
+<span class="kw">use </span><span class="kw">crate</span>::mem::{<span class="self">self</span>, ManuallyDrop};
 <span class="kw">use </span><span class="kw">crate</span>::rc::Rc;
 <span class="kw">use </span><span class="kw">crate</span>::sync::Arc;
 <span class="kw">use crate</span>::{Leak, Unleak};
@@ -147,7 +200,7 @@
 {
     JoinGuard {
         <span class="comment">// SAFETY: destruction guarantee from `Unleak&lt;&amp;'a ()&gt;` and `T: 'a`
-        </span>thread: <span class="kw">unsafe </span>{
+        </span>child: <span class="kw">unsafe </span>{
             ManuallyDrop::new_unchecked(thread::Builder::new().spawn_unchecked(f).unwrap())
         },
         _borrow: PhantomData,
@@ -171,8 +224,8 @@
 ///
 /// To spawn use [`spawn_scoped`].
 </span><span class="kw">pub struct </span>JoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {
-    <span class="comment">// using unit as a return value for simplicity
-    </span>thread: ManuallyDrop&lt;thread::JoinHandle&lt;T&gt;&gt;,
+    child: ManuallyDrop&lt;thread::JoinHandle&lt;T&gt;&gt;,
+
     <span class="comment">// not sure about covariance
     </span>_borrow: PhantomData&lt;Unleak&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>()&gt;&gt;,
     _unsend: PhantomData&lt;<span class="kw-2">*mut </span>()&gt;,
@@ -183,7 +236,22 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; JoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="kw">pub fn </span>join(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; std::thread::Result&lt;T&gt; {
-        <span class="kw">unsafe </span>{ ManuallyDrop::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.thread) }.join()
+        <span class="kw">let </span>join_handle;
+        <span class="comment">// SAFETY: we immediatelly join after
+        </span><span class="kw">unsafe </span>{
+            join_handle = ManuallyDrop::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.child);
+            <span class="comment">// need this to avoid calling `JoinGuard::drop`
+            </span>mem::forget_unchecked(<span class="self">self</span>);
+        }
+        join_handle.join()
+    }
+
+    <span class="kw">pub fn </span>thread(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>std::thread::Thread {
+        <span class="self">self</span>.child.thread()
+    }
+
+    <span class="kw">pub fn </span>is_finished(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.child.is_finished()
     }
 
     <span class="kw">pub fn </span>into_rc(<span class="self">self</span>) -&gt; Rc&lt;<span class="self">Self</span>&gt; {
@@ -199,16 +267,36 @@
     }
 }
 
+<span class="kw">impl</span>&lt;T&gt; JoinGuard&lt;<span class="lifetime">'static</span>, T&gt; {
+    <span class="kw">pub fn </span>into_handle(<span class="self">self</span>) -&gt; JoinHandle&lt;T&gt; {
+        <span class="self">self</span>.into()
+    }
+
+    <span class="kw">pub fn </span>detach(<span class="self">self</span>) {
+        <span class="kw">let _ </span>= <span class="self">self</span>.into_handle();
+    }
+}
+
 <span class="kw">impl</span>&lt;T&gt; From&lt;JoinGuard&lt;<span class="lifetime">'static</span>, T&gt;&gt; <span class="kw">for </span>JoinHandle&lt;T&gt; {
     <span class="kw">fn </span>from(<span class="kw-2">mut </span>value: JoinGuard&lt;<span class="lifetime">'static</span>, T&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">unsafe </span>{ ManuallyDrop::take(<span class="kw-2">&amp;mut </span>value.thread) }
+        <span class="kw">unsafe </span>{ ManuallyDrop::take(<span class="kw-2">&amp;mut </span>value.child) }
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T&gt; Drop <span class="kw">for </span>JoinGuard&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="comment">// Ignoring error, not propagating, fine in this situation
-        </span><span class="kw">let _ </span>= <span class="kw">unsafe </span>{ ManuallyDrop::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.thread) }.join();
+        <span class="kw">let </span>join_handle = <span class="kw">unsafe </span>{ ManuallyDrop::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.child) };
+        <span class="comment">// Shouldn't panic
+        </span><span class="kw">let </span>child = join_handle.thread().clone();
+        <span class="comment">// No panic since we guarantee that we would never join on ourselves,
+        // except when `Self: Leak`, then we don't care.
+        </span><span class="kw">let </span>res = join_handle.join();
+        <span class="comment">// Propagating panic there since structured parallelism, but ignoring
+        // during panic. Anyway child thread is joined thus either would
+        // be fine.
+        </span><span class="kw">if </span>res.is_err() &amp;&amp; !std::thread::panicking() {
+            <span class="macro">panic!</span>(<span class="string">"child thread {child:?} panicked"</span>);
+        }
     }
 }
 
@@ -229,6 +317,14 @@
         <span class="self">self</span>.inner.join()
     }
 
+    <span class="kw">pub fn </span>thread(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>std::thread::Thread {
+        <span class="self">self</span>.inner.thread()
+    }
+
+    <span class="kw">pub fn </span>is_finished(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.inner.is_finished()
+    }
+
     <span class="kw">pub fn </span>into_rc(<span class="self">self</span>) -&gt; Rc&lt;<span class="self">Self</span>&gt; {
         <span class="comment">// SAFETY: we cannot move Rc&lt;SendJoinGuard&gt; into it's
         //   closure because impl !Send for Rc&lt;SendJoinGuard&gt;
@@ -241,6 +337,16 @@
         //   same closure thus moving guard into the closure would
         //   introduce self-referential type which is prohibited
         </span><span class="kw">unsafe </span>{ Arc::new_unchecked(<span class="self">self</span>) }
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; SendJoinGuard&lt;<span class="lifetime">'static</span>, T&gt; {
+    <span class="kw">pub fn </span>into_handle(<span class="self">self</span>) -&gt; JoinHandle&lt;T&gt; {
+        <span class="self">self</span>.into()
+    }
+
+    <span class="kw">pub fn </span>detach(<span class="self">self</span>) {
+        <span class="kw">let _ </span>= <span class="self">self</span>.into_handle();
     }
 }
 

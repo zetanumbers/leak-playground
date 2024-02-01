@@ -126,7 +126,7 @@ impl<'a, T> Drop for ScopedJoinHandle<'a, T> {
     fn drop(&mut self) {
         self.inner.abort();
         let task = unsafe { ManuallyDrop::take(&mut self.inner) };
-        // TODO: this is hack-around without async drop
+        // TODO: this is a hack-around without async drop
         tokio::task::block_in_place(move || {
             tokio::runtime::Handle::current().block_on(async move {
                 match task.await {

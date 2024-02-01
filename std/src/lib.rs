@@ -8,7 +8,7 @@
 //! **Currently emits "higher-ranked lifetime error"**
 //!
 //! ```
-//! use leak_playground::*;
+//! use leak_playground_std::*;
 //! fn _internal_unleak_future() -> impl std::future::Future<Output = ()> + Leak {
 //!     async {
 //!         let num = std::hint::black_box(0);
@@ -27,7 +27,7 @@
 //! **Currently emits "higher-ranked lifetime error"**
 //!
 //! ```
-//! use leak_playground::*;
+//! use leak_playground_std::*;
 //! fn _internal_join_guard_future() -> impl std::future::Future<Output = ()> + Leak {
 //!     async {
 //!         let local = 42;
@@ -48,7 +48,7 @@
 //! **Currently emits "higher-ranked lifetime error", instead of something about unimplemented `Leak`**
 //!
 //! ```compile_fail
-//! use leak_playground::*;
+//! use leak_playground_std::*;
 //! fn _external_unleak_future<'a>(num: &'a i32) -> impl std::future::Future<Output = ()> + Leak + 'a {
 //!     async move {
 //!         let bor = Unleak::new(num);
@@ -63,7 +63,7 @@
 //! ### Static JoinGuard self ownership
 //!
 //! ```
-//! use leak_playground::*;
+//! use leak_playground_std::*;
 //! let (tx, rx) = sync::mpsc::rendezvous_channel();
 //! let thrd = thread::spawn_scoped(move || {
 //!     let _this_thread = rx.recv().unwrap();
@@ -74,7 +74,7 @@
 //! ### Self ownership of SendJoinGuard
 //!
 //! ```compile_fail
-//! use leak_playground::*;
+//! use leak_playground_std::*;
 //! let local = 42;
 //! let (tx, rx) = sync::mpsc::rendezvous_channel();
 //! let mut f = {
@@ -92,7 +92,7 @@
 //! ### Two-step self ownership
 //!
 //! ```compile_fail
-//! use leak_playground::*;
+//! use leak_playground_std::*;
 //! let local = 42;
 //!
 //! let (tx1, rx1) = sync::mpsc::rendezvous_channel();
@@ -123,7 +123,7 @@
 //! ### Nested ownership without cycles
 //!
 //! ```
-//! use leak_playground::*;
+//! use leak_playground_std::*;
 //! let local = 42;
 //!
 //! let mut f1 = || {
@@ -147,7 +147,7 @@
 //! ### Nested mixed ownership without cycles
 //!
 //! ```
-//! use leak_playground::*;
+//! use leak_playground_std::*;
 //! let local = 42;
 //!
 //! let mut f1 = || {

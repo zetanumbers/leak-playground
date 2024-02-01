@@ -1,6 +1,6 @@
 use std::{future::Future, marker::PhantomData, mem, pin::Pin, ptr::NonNull};
 
-use leak_playground::{mem::ManuallyDrop, Leak, Unleak};
+use leak_playground_std::{mem::ManuallyDrop, Leak, Unleak};
 use tokio::task::{JoinError, JoinHandle};
 
 pub fn spawn_scoped<'a, F>(future: F) -> ScopedJoinHandle<'a, F::Output>

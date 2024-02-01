@@ -60,9 +60,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d3d0e0f38255e7fa3cf31335b3a56f05febd18025f4db5ef7a0cfb4f8da651f"
 
 [[package]]
-name = "leak-playground"
+name = "leak-playground-std"
 version = "0.1.0"
 dependencies = [
+ "tokio",
+]
+
+[[package]]
+name = "leak-playground-tokio"
+version = "0.1.0"
+dependencies = [
+ "leak-playground-std",
  "tokio",
 ]
 
@@ -127,12 +135,4 @@ dependencies = [
  "backtrace",
  "num_cpus",
  "pin-project-lite",
-]
-
-[[package]]
-name = "tokio-leak-playground"
-version = "0.1.0"
-dependencies = [
- "leak-playground",
- "tokio",
 ]

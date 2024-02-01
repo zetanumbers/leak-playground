@@ -1,8 +1,8 @@
 [package]
-name = "tokio-leak-playground"
+name = "leak-playground-tokio"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-leak-playground = { version = "0.1.0", path = "..", features = ["tokio_rt"] }
+leak-playground-std = { version = "0.1.0", path = "../std", features = ["tokio_rt"] }
 tokio = { version = "1.35.1", features = ["rt", "rt-multi-thread"] }

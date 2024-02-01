@@ -1,4 +1,4 @@
-//! Possible [`tokio::task`] additions.
+//! Possible [`tokio::task`](https://docs.rs/tokio/1.35.1/tokio/task/index.html) additions.
 
 use std::{future::Future, marker::PhantomData, mem, pin::Pin, ptr::NonNull};
 
@@ -85,7 +85,8 @@ where
 /// [`ScopedSendJoinHandle`]. This is made to ensure we won't put this
 /// into itself, thus leaking it.
 ///
-/// To spawn use [`spawn_scoped`], [`spawn_local_scoped`], or [`spawn_blocking_scoped`].
+/// To spawn use [`spawn_scoped`], [`spawn_local_scoped`], or
+/// [`spawn_blocking_scoped`].
 pub struct ScopedJoinHandle<'a, T> {
     inner: ManuallyDrop<JoinHandle<Payload>>,
     _unleak: PhantomData<Unleak<&'a ()>>,
@@ -141,8 +142,8 @@ impl<'a, T> Drop for ScopedJoinHandle<'a, T> {
 
 /// Handle to a task, which cancels on drop. Implements `Send`.
 ///
-/// Can be sent across threads, but is more awkward to use than
-/// [`JoinGuard`].
+/// Can be sent across threads, but can be more awkward to use than
+/// [`ScopedJoinHandle`].
 ///
 /// To spawn use [`spawn_borrowed`], [`spawn_blocking_borrowed`].
 pub struct ScopedSendJoinHandle<'a, T> {

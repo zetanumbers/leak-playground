@@ -213,3 +213,8 @@ unsafe impl<T> Leak for &mut T {}
 
 // SAFETY: it is always safe to leak JoinHandle
 unsafe impl<T: 'static> Leak for std::thread::JoinHandle<T> {}
+
+#[cfg(feature = "tokio_rt")]
+mod tokio_rt {
+    unsafe impl<T: 'static> super::Leak for tokio::task::JoinHandle<T> {}
+}

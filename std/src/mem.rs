@@ -1,6 +1,8 @@
+//! Possible [`core::mem`] additions and edits.
+
 use core::mem;
 
-use crate::Leak;
+use crate::marker::Leak;
 
 pub fn forget<T: Leak>(x: T) {
     mem::forget(x)

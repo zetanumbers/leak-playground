@@ -1,8 +1,13 @@
+//! Possible [`tokio::task`] additions.
+
 use std::{future::Future, marker::PhantomData, mem, pin::Pin, ptr::NonNull};
 
-use leak_playground_std::{mem::ManuallyDrop, Leak, Unleak};
+use leak_playground_std::marker::{Leak, Unleak};
+use leak_playground_std::mem::ManuallyDrop;
 use tokio::task::{JoinError, JoinHandle};
 
+/// Spawns a non-static `Send` future, returning a `!Send` for non-static
+/// cases handle for it.
 pub fn spawn_scoped<'a, F>(future: F) -> ScopedJoinHandle<'a, F::Output>
 where
     F: Future + Send + 'a,
@@ -18,6 +23,7 @@ where
     }
 }
 
+/// Spawns a non-static `Send` future, returning a `Send` handle for it.
 pub fn spawn_borrowed<'a, F>(future: Pin<&'a mut F>) -> ScopedSendJoinHandle<'a, F::Output>
 where
     F: Future + Send + 'a,
@@ -28,6 +34,7 @@ where
     }
 }
 
+/// Spawns a non-static `!Send` future.
 pub fn spawn_local_scoped<'a, F>(future: F) -> ScopedJoinHandle<'a, F::Output>
 where
     F: Future + 'a,
@@ -43,6 +50,8 @@ where
     }
 }
 
+/// Runs the provided non-static closure on a thread where blocking is
+/// acceptable. Returns a `?Send` handle for it.
 pub fn spawn_blocking_scoped<'a, F, T>(f: F) -> ScopedJoinHandle<'a, T>
 where
     F: FnOnce() -> T + Send + 'a,
@@ -58,6 +67,8 @@ where
     }
 }
 
+/// Runs the provided non-static closure on a thread where blocking is
+/// acceptable. Returns a `Send` handle for it.
 pub fn spawn_blocking_borrowed<'a, F, T>(f: &'a mut F) -> ScopedSendJoinHandle<'a, T>
 where
     F: FnMut() -> T + Send + 'a,
@@ -68,6 +79,13 @@ where
     }
 }
 
+/// Handle to a task, which cancels on drop.
+///
+/// Cannot be sent across threads, as opposed to
+/// [`ScopedSendJoinHandle`]. This is made to ensure we won't put this
+/// into itself, thus leaking it.
+///
+/// To spawn use [`spawn_scoped`], [`spawn_local_scoped`], or [`spawn_blocking_scoped`].
 pub struct ScopedJoinHandle<'a, T> {
     inner: ManuallyDrop<JoinHandle<Payload>>,
     _unleak: PhantomData<Unleak<&'a ()>>,
@@ -121,6 +139,12 @@ impl<'a, T> Drop for ScopedJoinHandle<'a, T> {
     }
 }
 
+/// Handle to a task, which cancels on drop. Implements `Send`.
+///
+/// Can be sent across threads, but is more awkward to use than
+/// [`JoinGuard`].
+///
+/// To spawn use [`spawn_borrowed`], [`spawn_blocking_borrowed`].
 pub struct ScopedSendJoinHandle<'a, T> {
     inner: ScopedJoinHandle<'a, T>,
 }

@@ -1,11 +1,122 @@
+//! Possible [`std::thread`] additions. Contains examples.
+//!
+//! # Examples
+//!
+//! Static JoinGuard self ownership
+//!
+//! ```
+//! use leak_playground_std::*;
+//! let (tx, rx) = sync::mpsc::rendezvous_channel();
+//! let thrd = thread::spawn_scoped(move || {
+//!     let _this_thread = rx.recv().unwrap();
+//! });
+//! tx.send(thrd).unwrap();
+//! ```
+//!
+//! Self ownership of SendJoinGuard
+//!
+//! ```compile_fail
+//! use leak_playground_std::*;
+//! let local = 42;
+//! let (tx, rx) = sync::mpsc::rendezvous_channel();
+//! let mut f = {
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! };
+//! let thrd = thread::spawn_borrowed(&mut f);
+//! tx.send(thrd).unwrap();
+//! drop(tx);
+//! ```
+//!
+//! Two-step self ownership
+//!
+//! ```compile_fail
+//! use leak_playground_std::*;
+//! let local = 42;
+//!
+//! let (tx1, rx1) = sync::mpsc::rendezvous_channel();
+//! let mut f1 = {
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx1.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! };
+//! let thrd1 = thread::spawn_borrowed(&mut f1);
+//!
+//! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
+//! let mut f2 = {
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx2.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! };
+//! let thrd2 = thread::spawn_borrowed(&mut f2);
+//! tx1.send(thrd2).unwrap();
+//! drop(tx1);
+//! tx2.send(thrd1).unwrap();
+//! drop(tx2);
+//! ```
+//!
+//! Nested ownership without cycles
+//!
+//! ```
+//! use leak_playground_std::*;
+//! let local = 42;
+//!
+//! let mut f1 = || {
+//!     let _inner_local = &local;
+//! };
+//! let thrd1 = thread::spawn_borrowed(&mut f1);
+//!
+//! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
+//! let mut f2 = {
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx2.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! };
+//! let _thrd2 = thread::spawn_borrowed(&mut f2);
+//! tx2.send(thrd1).unwrap();
+//! drop(tx2);
+//! ```
+//!
+//! Nested mixed ownership without cycles
+//!
+//! ```
+//! use leak_playground_std::*;
+//! let local = 42;
+//!
+//! let mut f1 = || {
+//!     let _inner_local = &local;
+//! };
+//! let thrd1 = thread::spawn_borrowed(&mut f1);
+//!
+//! let (tx2, rx2) = sync::mpsc::rendezvous_channel();
+//! let _thrd2 = thread::spawn_scoped({
+//!     let local = &local;
+//!     move || {
+//!         let _this_thread = rx2.recv().unwrap();
+//!         let _inner_local = local;
+//!     }
+//! });
+//! tx2.send(thrd1).unwrap();
+//! ```
+
 use std::thread::JoinHandle;
 use std::{marker::PhantomData, thread};
 
+use crate::marker::{Leak, Unleak};
 use crate::mem::{self, ManuallyDrop};
 use crate::rc::Rc;
 use crate::sync::Arc;
-use crate::{Leak, Unleak};
 
+/// Spawn `?Send` thread handles.
 pub fn spawn_scoped<'a, F, T>(f: F) -> JoinGuard<'a, T>
 where
     F: FnOnce() -> T + Send + 'a,
@@ -21,6 +132,7 @@ where
     }
 }
 
+/// Spawn `Send` thread handles.
 pub fn spawn_borrowed<'a, F, T>(f: &'a mut F) -> SendJoinGuard<'a, T>
 where
     F: FnMut() -> T + Send + 'a,
@@ -33,7 +145,8 @@ where
 
 /// Handle to a thread, which joins on drop.
 ///
-/// Cannot be sent across threads, as opposed to [`SendJoinGuard`].
+/// Cannot be sent across threads, as opposed to [`SendJoinGuard`]. This
+/// is made to ensure we won't put this into itself, thus leaking it.
 ///
 /// To spawn use [`spawn_scoped`].
 pub struct JoinGuard<'a, T> {
@@ -113,7 +226,7 @@ impl<'a, T> Drop for JoinGuard<'a, T> {
     }
 }
 
-/// Handle to a thread, which joins on drop. Implements [`Send`].
+/// Handle to a thread, which joins on drop. Implements `Send`.
 ///
 /// Can be sent across threads, but is more awkward to use than
 /// [`JoinGuard`].

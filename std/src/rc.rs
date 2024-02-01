@@ -1,9 +1,9 @@
-//! Possible `Rc` implementation
+//! Possible [`std::rc`] edits.
 
 use core::fmt;
 use std::rc::Rc as StdRc;
 
-use crate::Leak;
+use crate::marker::Leak;
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Rc<T> {

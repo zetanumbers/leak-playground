@@ -1,3 +1,5 @@
+//! Possible [`std::sync`] additions and edits.
+
 mod arc;
 
 pub mod mpsc {

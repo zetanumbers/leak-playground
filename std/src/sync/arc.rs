@@ -3,7 +3,7 @@
 use core::fmt;
 use std::sync::Arc as StdArc;
 
-use crate::Leak;
+use crate::marker::Leak;
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Arc<T> {

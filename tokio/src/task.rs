@@ -9,7 +9,9 @@ where
     F::Output: Send + 'a,
 {
     ScopedJoinHandle {
-        inner: unsafe { ManuallyDrop::new_unchecked(tokio::spawn(erased_future(future))) },
+        inner: unsafe {
+            ManuallyDrop::new_unchecked(tokio::task::spawn(erased_send_future(future)))
+        },
         _unleak: PhantomData,
         _unsend: PhantomData,
     }
@@ -22,6 +24,20 @@ where
 {
     ScopedSendJoinHandle {
         inner: spawn_scoped(future),
+    }
+}
+
+pub fn spawn_local_scoped<'a, F>(future: F) -> ScopedJoinHandle<'a, F::Output>
+where
+    F: Future + 'a,
+    F::Output: 'a,
+{
+    ScopedJoinHandle {
+        inner: unsafe {
+            ManuallyDrop::new_unchecked(tokio::task::spawn_local(erased_future(future)))
+        },
+        _unleak: PhantomData,
+        _unsend: PhantomData,
     }
 }
 
@@ -81,7 +97,7 @@ pub struct ScopedSendJoinHandle<'a, T> {
 }
 
 // SAFETY: we use this for borrowed futures
-unsafe impl<'a, T> Send for ScopedSendJoinHandle<'a, T> {}
+unsafe impl<'a, T: Send> Send for ScopedSendJoinHandle<'a, T> {}
 
 impl<'a, T> Future for ScopedSendJoinHandle<'a, T> {
     type Output = Result<T, JoinError>;
@@ -95,20 +111,30 @@ impl<'a, T> Future for ScopedSendJoinHandle<'a, T> {
 }
 
 impl<'a, T> ScopedSendJoinHandle<'a, T> {
-    pub async fn cancel(mut self) -> Result<(), JoinError> {
+    pub async fn cancel(self) -> Result<(), JoinError> {
         self.inner.cancel().await
     }
 }
 
 // # Hack-around utilities
 
-unsafe fn erased_future<F>(f: F) -> impl Future<Output = Payload> + Send + 'static
+unsafe fn erased_send_future<F>(f: F) -> impl Future<Output = Payload> + Send + 'static
 where
     F: Future + Send,
 {
     let f = async move { Payload::new_unchecked(f.await) };
     let f: Pin<Box<dyn Future<Output = Payload> + Send + '_>> = Box::pin(f);
     let f: Pin<Box<dyn Future<Output = Payload> + Send>> = mem::transmute(f);
+    f
+}
+
+unsafe fn erased_future<F>(f: F) -> impl Future<Output = Payload> + 'static
+where
+    F: Future,
+{
+    let f = async move { Payload::new_unchecked(f.await) };
+    let f: Pin<Box<dyn Future<Output = Payload> + '_>> = Box::pin(f);
+    let f: Pin<Box<dyn Future<Output = Payload>>> = mem::transmute(f);
     f
 }
 

@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["leak_playground"];
+window.ALL_CRATES = ["leak_playground_std","leak_playground_tokio"];

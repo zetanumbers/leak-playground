@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["mem","rc","sync","thread"],"struct":["Unleak"],"trait":["Leak"]};

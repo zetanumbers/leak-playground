@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["spawn_blocking_borrowed","spawn_blocking_scoped","spawn_borrowed","spawn_local_scoped","spawn_scoped"],"struct":["ScopedJoinHandle","ScopedSendJoinHandle"]};

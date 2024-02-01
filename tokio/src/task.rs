@@ -14,6 +14,7 @@ where
         },
         _unleak: PhantomData,
         _unsend: PhantomData,
+        _output: PhantomData,
     }
 }
 
@@ -38,12 +39,40 @@ where
         },
         _unleak: PhantomData,
         _unsend: PhantomData,
+        _output: PhantomData,
+    }
+}
+
+pub fn spawn_blocking_scoped<'a, F, T>(f: F) -> ScopedJoinHandle<'a, T>
+where
+    F: FnOnce() -> T + Send + 'a,
+    T: Send + 'a,
+{
+    ScopedJoinHandle {
+        inner: unsafe {
+            ManuallyDrop::new_unchecked(tokio::task::spawn_blocking(erased_send_fn_once(f)))
+        },
+        _unleak: PhantomData,
+        _unsend: PhantomData,
+        _output: PhantomData,
+    }
+}
+
+pub fn spawn_blocking_borrowed<'a, F, T>(f: &'a mut F) -> ScopedSendJoinHandle<'a, T>
+where
+    F: FnMut() -> T + Send + 'a,
+    T: Send + 'a,
+{
+    ScopedSendJoinHandle {
+        inner: spawn_blocking_scoped(f),
     }
 }
 
 pub struct ScopedJoinHandle<'a, T> {
     inner: ManuallyDrop<JoinHandle<Payload>>,
-    _unleak: PhantomData<Unleak<(&'a (), T)>>,
+    _unleak: PhantomData<Unleak<&'a ()>>,
+    // No need for Unleak since we put bound `T: 'a` on constructors
+    _output: PhantomData<fn() -> T>,
     _unsend: PhantomData<*mut ()>,
 }
 
@@ -117,6 +146,16 @@ impl<'a, T> ScopedSendJoinHandle<'a, T> {
 }
 
 // # Hack-around utilities
+
+unsafe fn erased_send_fn_once<F, R>(f: F) -> impl FnOnce() -> Payload + Send + 'static
+where
+    F: FnOnce() -> R + Send,
+{
+    let f = move || Payload::new_unchecked(f());
+    let f: Box<dyn FnOnce() -> Payload + Send + '_> = Box::new(f);
+    let f: Box<dyn FnOnce() -> Payload + Send> = mem::transmute(f);
+    f
+}
 
 unsafe fn erased_send_future<F>(f: F) -> impl Future<Output = Payload> + Send + 'static
 where

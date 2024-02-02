@@ -111,7 +111,7 @@
 use std::thread::JoinHandle;
 use std::{marker::PhantomData, thread};
 
-use crate::marker::{Leak, Unleak};
+use crate::marker::Unleak;
 use crate::mem::{self, ManuallyDrop};
 use crate::rc::Rc;
 use crate::sync::Arc;
@@ -157,7 +157,7 @@ pub struct JoinGuard<'a, T> {
     _unsend: PhantomData<*mut ()>,
 }
 
-unsafe impl<'a, T> Send for JoinGuard<'a, T> where Self: Leak {}
+unsafe impl<T> Send for JoinGuard<'static, T> {}
 unsafe impl<'a, T> Sync for JoinGuard<'a, T> {}
 
 impl<'a, T> JoinGuard<'a, T> {
@@ -276,11 +276,8 @@ impl<T> SendJoinGuard<'static, T> {
     }
 }
 
-impl<'a, T> From<JoinGuard<'a, T>> for SendJoinGuard<'a, T>
-where
-    JoinGuard<'a, T>: Leak,
-{
-    fn from(inner: JoinGuard<'a, T>) -> Self {
+impl<T> From<JoinGuard<'static, T>> for SendJoinGuard<'static, T> {
+    fn from(inner: JoinGuard<'static, T>) -> Self {
         SendJoinGuard { inner }
     }
 }

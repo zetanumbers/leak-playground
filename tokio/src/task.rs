@@ -4,7 +4,7 @@ use std::{future::Future, marker::PhantomData, mem, pin::Pin, ptr::NonNull};
 
 use leak_playground_std::marker::{Leak, Unleak};
 use leak_playground_std::mem::ManuallyDrop;
-use tokio::task::{JoinError, JoinHandle};
+use tokio::task::{AbortHandle, JoinError, JoinHandle};
 
 /// Spawns a non-static `Send` future, returning a `!Send` for non-static
 /// cases handle for it.
@@ -121,6 +121,14 @@ impl<'a, T> ScopedJoinHandle<'a, T> {
             Err(e) => Err(e),
         }
     }
+
+    pub fn abort(&self) {
+        self.inner.abort();
+    }
+
+    pub fn abort_handle(&self) -> AbortHandle {
+        self.inner.abort_handle()
+    }
 }
 
 impl<'a, T> Drop for ScopedJoinHandle<'a, T> {
@@ -167,6 +175,14 @@ impl<'a, T> Future for ScopedSendJoinHandle<'a, T> {
 impl<'a, T> ScopedSendJoinHandle<'a, T> {
     pub async fn cancel(self) -> Result<(), JoinError> {
         self.inner.cancel().await
+    }
+
+    pub fn abort(&self) {
+        self.inner.abort();
+    }
+
+    pub fn abort_handle(&self) -> AbortHandle {
+        self.inner.abort_handle()
     }
 }
 

@@ -1,8 +1,8 @@
 //! Possible [`tokio::task`](https://docs.rs/tokio/1.35.1/tokio/task/index.html) additions.
 
-use std::{future::Future, marker::PhantomData, mem, pin::Pin, ptr::NonNull};
+use std::{future::Future, marker::PhantomData, pin::Pin, ptr::NonNull};
 
-use leak_playground_std::marker::{Leak, Unleak};
+use leak_playground_std::marker::Unleak;
 use leak_playground_std::mem::ManuallyDrop;
 use tokio::task::{AbortHandle, JoinError, JoinHandle};
 
@@ -95,7 +95,7 @@ pub struct ScopedJoinHandle<'a, T> {
     _unsend: PhantomData<*mut ()>,
 }
 
-unsafe impl<T: Send> Send for ScopedJoinHandle<'_, T> where Self: Leak {}
+unsafe impl<T: Send> Send for ScopedJoinHandle<'static, T> {}
 unsafe impl<T: Send> Sync for ScopedJoinHandle<'_, T> {}
 impl<T> Unpin for ScopedJoinHandle<'_, T> {}
 
@@ -130,6 +130,9 @@ impl<'a, T> ScopedJoinHandle<'a, T> {
         self.inner.abort_handle()
     }
 }
+
+// TODO: `impl<T> From<ScopedJoinHandle<'static, T>> for JoinHandle<T>`
+//  is possible but requires internals to avoid hacky `Payload` return type
 
 impl<'a, T> Drop for ScopedJoinHandle<'a, T> {
     fn drop(&mut self) {
@@ -186,6 +189,21 @@ impl<'a, T> ScopedSendJoinHandle<'a, T> {
     }
 }
 
+impl<'a, T> From<ScopedSendJoinHandle<'a, T>> for ScopedJoinHandle<'a, T> {
+    fn from(value: ScopedSendJoinHandle<'a, T>) -> Self {
+        value.inner
+    }
+}
+
+impl<T> From<ScopedJoinHandle<'static, T>> for ScopedSendJoinHandle<'static, T> {
+    fn from(inner: ScopedJoinHandle<'static, T>) -> Self {
+        ScopedSendJoinHandle { inner }
+    }
+}
+
+// TODO: `impl<T> From<ScopedSendJoinHandle<'static, T>> for JoinHandle<T>`
+//  is possible but requires internals to avoid hacky `Payload` return type
+
 // # Hack-around utilities
 
 unsafe fn erased_send_fn_once<F, R>(f: F) -> impl FnOnce() -> Payload + Send + 'static
@@ -194,7 +212,7 @@ where
 {
     let f = move || Payload::new_unchecked(f());
     let f: Box<dyn FnOnce() -> Payload + Send + '_> = Box::new(f);
-    let f: Box<dyn FnOnce() -> Payload + Send> = mem::transmute(f);
+    let f: Box<dyn FnOnce() -> Payload + Send> = std::mem::transmute(f);
     f
 }
 
@@ -204,7 +222,7 @@ where
 {
     let f = async move { Payload::new_unchecked(f.await) };
     let f: Pin<Box<dyn Future<Output = Payload> + Send + '_>> = Box::pin(f);
-    let f: Pin<Box<dyn Future<Output = Payload> + Send>> = mem::transmute(f);
+    let f: Pin<Box<dyn Future<Output = Payload> + Send>> = std::mem::transmute(f);
     f
 }
 
@@ -214,7 +232,7 @@ where
 {
     let f = async move { Payload::new_unchecked(f.await) };
     let f: Pin<Box<dyn Future<Output = Payload> + '_>> = Box::pin(f);
-    let f: Pin<Box<dyn Future<Output = Payload>>> = mem::transmute(f);
+    let f: Pin<Box<dyn Future<Output = Payload>>> = std::mem::transmute(f);
     f
 }
 

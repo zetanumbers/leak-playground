@@ -1,4 +1,4 @@
-//! Possible [`std::sync`] additions and edits.
+//! Possible [`std::sync`] additions and replacements.
 
 mod arc;
 

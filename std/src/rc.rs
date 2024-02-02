@@ -1,4 +1,4 @@
-//! Possible [`std::rc`] edits.
+//! Possible [`std::rc`] replacements.
 
 use core::fmt;
 use std::rc::Rc as StdRc;

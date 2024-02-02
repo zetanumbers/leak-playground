@@ -1,4 +1,4 @@
-//! Possible [`core::mem`] additions and edits.
+//! Possible [`core::mem`] additions and replacements.
 
 use core::mem;
 

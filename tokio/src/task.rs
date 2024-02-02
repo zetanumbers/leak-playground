@@ -91,7 +91,7 @@ pub struct ScopedJoinHandle<'a, T> {
     inner: ManuallyDrop<JoinHandle<Payload>>,
     _unleak: PhantomData<Unleak<&'a ()>>,
     // No need for Unleak since we put bound `T: 'a` on constructors
-    _output: PhantomData<fn() -> T>,
+    _output: PhantomData<T>,
     _unsend: PhantomData<*mut ()>,
 }
 

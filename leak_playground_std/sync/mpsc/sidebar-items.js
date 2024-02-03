@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["rendezvous_channel"]};
+window.SIDEBAR_ITEMS = {"fn":["channel","channel_unchecked","rendezvous_channel","sync_channel","sync_channel_unchecked"]};

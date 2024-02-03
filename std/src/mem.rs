@@ -37,6 +37,10 @@ impl<T> ManuallyDrop<T> {
     pub unsafe fn take(slot: &mut ManuallyDrop<T>) -> T {
         mem::ManuallyDrop::take(&mut slot.inner)
     }
+
+    pub const fn into_inner(slot: ManuallyDrop<T>) -> T {
+        mem::ManuallyDrop::into_inner(slot.inner)
+    }
 }
 
 impl<T: ?Sized> std::ops::DerefMut for ManuallyDrop<T> {

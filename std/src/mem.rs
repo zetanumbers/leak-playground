@@ -18,8 +18,10 @@ pub struct ManuallyDrop<T: ?Sized> {
     inner: mem::ManuallyDrop<T>,
 }
 
+unsafe impl<T: ?Sized> Leak for ManuallyDrop<T> {}
+
 impl<T> ManuallyDrop<T> {
-    pub fn new(value: T) -> Self
+    pub const fn new(value: T) -> Self
     where
         T: Leak,
     {
@@ -28,7 +30,7 @@ impl<T> ManuallyDrop<T> {
         }
     }
 
-    pub unsafe fn new_unchecked(value: T) -> Self {
+    pub const unsafe fn new_unchecked(value: T) -> Self {
         Self {
             inner: mem::ManuallyDrop::new(value),
         }
@@ -54,5 +56,94 @@ impl<T: ?Sized> std::ops::Deref for ManuallyDrop<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+#[repr(transparent)]
+pub struct MaybeUninit<T> {
+    inner: mem::MaybeUninit<T>,
+}
+
+unsafe impl<T> Leak for MaybeUninit<T> {}
+
+impl<T> MaybeUninit<T> {
+    pub const fn new(val: T) -> Self
+    where
+        T: Leak,
+    {
+        MaybeUninit {
+            inner: mem::MaybeUninit::new(val),
+        }
+    }
+
+    pub const unsafe fn new_unchecked(val: T) -> Self {
+        MaybeUninit {
+            inner: mem::MaybeUninit::new(val),
+        }
+    }
+
+    pub const fn uninit() -> Self {
+        MaybeUninit {
+            inner: mem::MaybeUninit::uninit(),
+        }
+    }
+
+    pub const fn zeroed() -> Self {
+        MaybeUninit {
+            inner: mem::MaybeUninit::uninit(),
+        }
+    }
+
+    pub fn write(&mut self, val: T) -> &mut T
+    where
+        T: Leak,
+    {
+        self.inner.write(val)
+    }
+
+    pub unsafe fn write_unchecked(&mut self, val: T) -> &mut T {
+        self.inner.write(val)
+    }
+
+    pub const fn as_ptr(&self) -> *const T {
+        self.inner.as_ptr()
+    }
+
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self.inner.as_mut_ptr()
+    }
+
+    pub const unsafe fn assume_init(self) -> T {
+        self.inner.assume_init()
+    }
+
+    pub const unsafe fn assume_init_read(&self) -> T {
+        self.inner.assume_init_read()
+    }
+
+    pub unsafe fn assume_init_drop(&mut self) {
+        self.inner.assume_init_drop()
+    }
+
+    pub const unsafe fn assume_init_ref(&self) -> &T {
+        self.inner.assume_init_ref()
+    }
+
+    pub unsafe fn assume_init_mut(&mut self) -> &mut T {
+        self.inner.assume_init_mut()
+    }
+}
+
+impl<T: Copy> Copy for MaybeUninit<T> {}
+
+impl<T: Copy> Clone for MaybeUninit<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> std::fmt::Debug for MaybeUninit<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(f)
     }
 }

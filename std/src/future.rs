@@ -11,7 +11,7 @@
 //!         let num = std::hint::black_box(0);
 //!         let bor = Unleak::new(&num);
 //!         let () = std::future::pending().await;
-//!         assert_eq!(*bor.0, 0);
+//!         assert_eq!(**bor, 0);
 //!     }
 //! }
 //! ```
@@ -49,7 +49,7 @@
 //!     async move {
 //!         let bor = Unleak::new(num);
 //!         let () = std::future::pending().await;
-//!         assert_eq!(*bor.0, 0);
+//!         assert_eq!(**bor, 0);
 //!     }
 //! }
 //! ```

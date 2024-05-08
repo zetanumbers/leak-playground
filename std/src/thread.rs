@@ -111,7 +111,7 @@
 use std::thread::JoinHandle;
 use std::{marker::PhantomData, thread};
 
-use crate::marker::Unleak;
+use crate::marker::{Leak, Unleak};
 use crate::mem::{self, ManuallyDrop};
 use crate::rc::Rc;
 use crate::sync::Arc;
@@ -152,15 +152,15 @@ where
 pub struct JoinGuard<'a, T> {
     child: ManuallyDrop<thread::JoinHandle<T>>,
 
-    // not sure about covariance
-    _borrow: PhantomData<Unleak<&'a ()>>,
+    /// Not sure about covariance there.
+    _borrow: PhantomData<Unleak<'static, &'a ()>>,
     _unsend: PhantomData<*mut ()>,
 }
 
-unsafe impl<T> Send for JoinGuard<'static, T> {}
-unsafe impl<'a, T> Sync for JoinGuard<'a, T> {}
+unsafe impl<T> Send for JoinGuard<'_, T> where Self: Leak {}
+unsafe impl<T> Sync for JoinGuard<'_, T> {}
 
-impl<'a, T> JoinGuard<'a, T> {
+impl<T> JoinGuard<'_, T> {
     pub fn join(mut self) -> std::thread::Result<T> {
         let join_handle;
         // SAFETY: we immediately, join after

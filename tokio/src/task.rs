@@ -89,7 +89,7 @@ where
 /// [`spawn_blocking_scoped`].
 pub struct ScopedJoinHandle<'a, T> {
     inner: ManuallyDrop<JoinHandle<Payload>>,
-    _unleak: PhantomData<Unleak<&'a ()>>,
+    _unleak: PhantomData<Unleak<'static, &'a ()>>,
     // No need for Unleak since we put bound `T: 'a` on constructors
     _output: PhantomData<T>,
     _unsend: PhantomData<*mut ()>,

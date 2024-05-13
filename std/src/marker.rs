@@ -2,6 +2,8 @@
 
 use std::{fmt::Debug, future::Future, marker::PhantomData, pin::Pin, task};
 
+use crate::anchor::Anchored;
+
 /// The core trait of the destruction guarantee.
 ///
 /// # Safety
@@ -38,13 +40,31 @@ impl<T> Unleak<'static, T> {
     }
 }
 
+impl<'a, T> Unleak<'a, T> {
+    pub fn with_anchored<U>(inner: T, _: &Anchored<'a, U>) -> Self {
+        Unleak {
+            _unleak: PhantomStaticUnleak,
+            _anchor: PhantomData,
+            inner,
+        }
+    }
+}
+
 impl<T> Unleak<'_, T> {
     /// Get inner value.
-    pub unsafe fn into_inner(slot: Self) -> T
+    pub fn into_inner(slot: Self) -> T
     where
         Self: Leak,
     {
+        slot.inner
+    }
 
+    /// Get inner value.
+    ///
+    /// # Safety
+    ///
+    /// Make sure T is dropped.
+    pub unsafe fn into_inner_unchecked(slot: Self) -> T {
         slot.inner
     }
 }

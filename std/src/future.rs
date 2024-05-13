@@ -2,14 +2,14 @@
 //!
 //! `Leak` future with internal unleak logic.
 //!
-//! **Currently emits "higher-ranked lifetime error"**
+//! **Currently emits "higher-ranked lifetime error", instead of compiling**
 //!
-//! ```
+//! ```ignore
 //! use leak_playground_std::marker::{Leak, Unleak};
 //! fn _internal_unleak_future() -> impl std::future::Future<Output = ()> + Leak {
 //!     async {
 //!         let num = std::hint::black_box(0);
-//!         let bor = Unleak::<'static, _>::new(&num);
+//!         let bor = Unleak::new_static(&num);
 //!         let () = std::future::pending().await;
 //!         assert_eq!(**bor, 0);
 //!     }
@@ -19,9 +19,9 @@
 //! `Leak` future with `JoinGuard`s. This is fine because of the pin's [drop
 //! guarantee](https://doc.rust-lang.org/1.75.0/std/pin/index.html#drop-guarantee).
 //!
-//! **Currently emits "higher-ranked lifetime error"**
+//! **Currently emits "higher-ranked lifetime error", instead of compiling**
 //!
-//! ```
+//! ```ignore
 //! use leak_playground_std::thread;
 //! use leak_playground_std::marker::Leak;
 //! fn _internal_join_guard_future() -> impl std::future::Future<Output = ()> + Leak {
@@ -47,7 +47,7 @@
 //! use leak_playground_std::marker::{Leak, Unleak};
 //! fn _external_unleak_future<'a>(num: &'a i32) -> impl std::future::Future<Output = ()> + Leak + 'a {
 //!     async move {
-//!         let bor = Unleak::<'static, _>::new(num);
+//!         let bor = Unleak::new_static(num);
 //!         let () = std::future::pending().await;
 //!         assert_eq!(**bor, 0);
 //!     }

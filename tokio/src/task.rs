@@ -17,7 +17,7 @@ where
         inner: unsafe {
             ManuallyDrop::new_unchecked(tokio::task::spawn(erased_send_future(future)))
         },
-        _unleak: PhantomData,
+        _unleak: Unleak::new_static(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
     }
@@ -44,7 +44,7 @@ where
         inner: unsafe {
             ManuallyDrop::new_unchecked(tokio::task::spawn_local(erased_future(future)))
         },
-        _unleak: PhantomData,
+        _unleak: Unleak::new_static(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
     }
@@ -61,7 +61,7 @@ where
         inner: unsafe {
             ManuallyDrop::new_unchecked(tokio::task::spawn_blocking(erased_send_fn_once(f)))
         },
-        _unleak: PhantomData,
+        _unleak: Unleak::new_static(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
     }
@@ -89,7 +89,7 @@ where
 /// [`spawn_blocking_scoped`].
 pub struct ScopedJoinHandle<'a, T> {
     inner: ManuallyDrop<JoinHandle<Payload>>,
-    _unleak: PhantomData<Unleak<'static, &'a ()>>,
+    _unleak: Unleak<'static, PhantomData<&'a ()>>,
     // No need for Unleak since we put bound `T: 'a` on constructors
     _output: PhantomData<T>,
     _unsend: PhantomData<*mut ()>,

@@ -127,7 +127,7 @@ where
         child: unsafe {
             ManuallyDrop::new_unchecked(thread::Builder::new().spawn_unchecked(f).unwrap())
         },
-        _borrow: PhantomData,
+        _borrow: Unleak::new_static(PhantomData),
         _unsend: PhantomData,
     }
 }
@@ -153,7 +153,7 @@ pub struct JoinGuard<'a, T> {
     child: ManuallyDrop<thread::JoinHandle<T>>,
 
     /// Not sure about covariance there.
-    _borrow: PhantomData<Unleak<'static, &'a ()>>,
+    _borrow: Unleak<'static, PhantomData<&'a ()>>,
     _unsend: PhantomData<*mut ()>,
 }
 

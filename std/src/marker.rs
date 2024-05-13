@@ -18,7 +18,7 @@ pub struct Unleak<'a, T: ?Sized> {
     /// Inner value must be able to outlive this lifetime to be able to
     /// be forgotten. Of course it is contravariant, since expanding it
     /// may only disable the [`Leak`] implementation.
-    _foundation: PhantomData<fn(&'a ())>,
+    _anchor: PhantomData<fn(&'a ())>,
     inner: T,
 }
 
@@ -28,16 +28,23 @@ impl<T: ?Sized + Debug> Debug for Unleak<'_, T> {
     }
 }
 
-impl<T> Unleak<'_, T> {
-    pub const fn new(inner: T) -> Self {
+impl<T> Unleak<'static, T> {
+    pub const fn new_static(inner: T) -> Self {
         Unleak {
             _unleak: PhantomStaticUnleak,
-            _foundation: PhantomData,
+            _anchor: PhantomData,
             inner,
         }
     }
+}
 
-    pub fn into_inner(slot: Unleak<'_, T>) -> T {
+impl<T> Unleak<'_, T> {
+    /// Get inner value.
+    pub unsafe fn into_inner(slot: Self) -> T
+    where
+        Self: Leak,
+    {
+
         slot.inner
     }
 }
@@ -84,6 +91,7 @@ unsafe impl<T: ?Sized> Leak for &mut T {}
 unsafe impl<T: 'static> Leak for std::thread::JoinHandle<T> {}
 
 #[cfg(feature = "tokio_rt")]
+#[doc(hidden)] // Nothing to document
 mod tokio_rt {
     unsafe impl<T: 'static> super::Leak for tokio::task::JoinHandle<T> {}
 }

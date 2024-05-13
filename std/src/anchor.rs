@@ -2,34 +2,13 @@
 
 use std::{fmt::Debug, future::Future, marker::PhantomData, pin::Pin, task};
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Anchor;
-
-impl Anchor {
-    #[inline(always)]
-    pub fn new() -> Self {
-        Anchor
-    }
-
-    /// To reanchor a value is to restrict its lifetime further
-    pub fn reanchor<'new, 'old: 'new, T>(
-        &'new self,
-        value: Anchored<'old, T>,
-    ) -> Anchored<'new, T> {
-        Anchored {
-            inner: value.inner,
-            _anchor: PhantomData,
-        }
-    }
-}
-
-/// A transparent wrapper type to use with [`crate::marker::Unleak`]. To anchor
-/// a value is to restrict its lifetime.
+/// A transparent wrapper type to use with [`crate::marker::Unleak`]. To
+/// anchor a value is to restrict its lifetime.
 #[repr(transparent)]
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Anchored<'a, T: ?Sized> {
-    /// Invariant lifetime, shortening only allowed via [`Anchor::reanchor`]
-    _anchor: PhantomData<fn(&'a Anchor) -> &'a Anchor>,
+    /// Invariant lifetime, shortening only allowed via [`Anchored::anchor`]
+    _anchor: PhantomData<fn(&'a ()) -> &'a ()>,
     inner: T,
 }
 
@@ -40,7 +19,7 @@ impl<T: ?Sized + Debug> Debug for Anchored<'_, T> {
 }
 
 impl<T> Anchored<'static, T> {
-    pub const fn new_static(inner: T) -> Self {
+    pub const fn new(inner: T) -> Self {
         Anchored {
             _anchor: PhantomData,
             inner,
@@ -48,14 +27,30 @@ impl<T> Anchored<'static, T> {
     }
 }
 
-impl<T> Anchored<'_, T> {
+// NOTE: Library authors should use `Anchored` as with `Pin`, i.e. give
+// those directly to the user or at least use it with their public API.
+//
+// TODO: Maybe allow to implement methods on `self: Anchored<'a, Self>`
+// within the compiler and remove `Defer` impl
+impl<'a, T> Anchored<'a, T> {
+    pub fn anchor<'b>(self, _borrow: &'b T) -> Anchored<'b, T>
+    where
+        'a: 'b,
+    {
+        Anchored {
+            inner: self.inner,
+            _anchor: PhantomData,
+        }
+    }
+
     /// Get the inner value.
     ///
     /// # Safety
     ///
-    /// Make sure you don't outlive [`crate::marker::Unleak`]
-    pub unsafe fn unanchor(slot: Self) -> T {
-        slot.inner
+    /// Make sure you don't outlive your [`crate::marker::Unleak`]
+    /// instances.
+    pub unsafe fn unanchor(self) -> T {
+        self.inner
     }
 }
 

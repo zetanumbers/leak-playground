@@ -41,7 +41,7 @@ impl<T> Unleak<'static, T> {
 }
 
 impl<'a, T> Unleak<'a, T> {
-    pub fn with_anchored<U>(inner: T, _: &Anchored<'a, U>) -> Self {
+    pub fn with_anchored<U>(inner: T, _anchored: &Anchored<'a, U>) -> Self {
         Unleak {
             _unleak: PhantomStaticUnleak,
             _anchor: PhantomData,

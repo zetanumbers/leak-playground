@@ -36,6 +36,7 @@ impl<'a, T> Anchored<'a, T> {
     pub fn anchor<'b>(self, _borrow: &'b T) -> Anchored<'b, T>
     where
         'a: 'b,
+        T: 'b,
     {
         Anchored {
             inner: self.inner,

@@ -1,0 +1,8 @@
+[package]
+name = "leak-playground-thread-pool"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+flume = { version = "0.11.0", default-features = false }
+leak-playground-std = { version = "0.1.0", path = "../std" }

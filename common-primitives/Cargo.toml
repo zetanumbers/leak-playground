@@ -1,5 +1,5 @@
 [package]
-name = "leak-playground-thread-pool"
+name = "leak-playground-common-primitives"
 version = "0.1.0"
 edition = "2021"
 

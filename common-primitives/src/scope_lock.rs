@@ -7,11 +7,18 @@ use std::{
 
 use leak_playground_std::marker::Unleak;
 
+#[derive(Default)]
 pub struct ScopeLock {
     scope_mutex: Mutex<()>,
 }
 
 impl ScopeLock {
+    pub const fn new() -> Self {
+        Self {
+            scope_mutex: Mutex::new(()),
+        }
+    }
+
     pub fn lock_fn<'new, 'old, 'lock, F, I, O>(
         &'lock mut self,
         f: &'old F,

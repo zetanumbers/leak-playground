@@ -48,8 +48,17 @@ impl<'a, T> Unleak<'a, T> {
             inner,
         }
     }
+
+    pub fn with_arbitrary_lifetime(inner: T) -> Self {
+        Unleak {
+            _unleak: PhantomStaticUnleak,
+            _anchor: PhantomData,
+            inner,
+        }
+    }
 }
 
+// TODO: Consider simpifying
 impl<T> Unleak<'_, T> {
     /// Get inner value.
     pub fn into_inner(slot: Self) -> T

@@ -52,23 +52,9 @@ impl<'a, T> Unforget<'a, T> {
             inner,
         }
     }
-}
-
-impl<T> Unforget<'_, T> {
-    /// Get inner value.
-    pub fn into_inner(slot: Self) -> T
-    where
-        Self: Forget,
-    {
-        slot.inner
-    }
 
     /// Get inner value.
-    ///
-    /// # Safety
-    ///
-    /// Make sure T is dropped.
-    pub unsafe fn into_inner_unchecked(slot: Self) -> T {
+    pub fn into_inner(slot: Self) -> T {
         slot.inner
     }
 }

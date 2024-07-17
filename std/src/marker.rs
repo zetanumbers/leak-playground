@@ -12,6 +12,9 @@ use crate::anchor::Anchored;
 /// forget your type.
 pub unsafe auto trait Forget {}
 
+#[doc(inline)]
+pub use Forget as Leak;
+
 /// A transparent wrapper to make your types `!Forget`
 #[repr(transparent)]
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -29,6 +32,9 @@ impl<T: ?Sized + Debug> Debug for Unforget<'_, T> {
         f.debug_tuple("Unforget").field(&&self.inner).finish()
     }
 }
+
+#[doc(inline)]
+pub use Unforget as Unleak;
 
 impl<T> Unforget<'static, T> {
     pub const fn new_static(inner: T) -> Self {

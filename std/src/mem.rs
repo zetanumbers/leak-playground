@@ -2,9 +2,9 @@
 
 use core::mem;
 
-use crate::marker::Leak;
+use crate::marker::Forget;
 
-pub fn forget<T: Leak>(x: T) {
+pub fn forget<T: Forget>(x: T) {
     mem::forget(x)
 }
 
@@ -18,12 +18,12 @@ pub struct ManuallyDrop<T: ?Sized> {
     inner: mem::ManuallyDrop<T>,
 }
 
-unsafe impl<T: ?Sized> Leak for ManuallyDrop<T> {}
+unsafe impl<T: ?Sized> Forget for ManuallyDrop<T> {}
 
 impl<T> ManuallyDrop<T> {
     pub const fn new(value: T) -> Self
     where
-        T: Leak,
+        T: Forget,
     {
         Self {
             inner: mem::ManuallyDrop::new(value),
@@ -64,12 +64,12 @@ pub struct MaybeUninit<T> {
     inner: mem::MaybeUninit<T>,
 }
 
-unsafe impl<T> Leak for MaybeUninit<T> {}
+unsafe impl<T> Forget for MaybeUninit<T> {}
 
 impl<T> MaybeUninit<T> {
     pub const fn new(val: T) -> Self
     where
-        T: Leak,
+        T: Forget,
     {
         MaybeUninit {
             inner: mem::MaybeUninit::new(val),
@@ -96,7 +96,7 @@ impl<T> MaybeUninit<T> {
 
     pub fn write(&mut self, val: T) -> &mut T
     where
-        T: Leak,
+        T: Forget,
     {
         self.inner.write(val)
     }

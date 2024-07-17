@@ -1,30 +1,30 @@
 //! # Examples
 //!
-//! `Leak` future with internal unleak logic.
+//! `Forget` future with internal unforget logic.
 //!
 //! **Currently emits "higher-ranked lifetime error", instead of compiling**
 //!
 //! ```ignore
-//! use leak_playground_std::marker::{Leak, Unleak};
-//! fn _internal_unleak_future() -> impl std::future::Future<Output = ()> + Leak {
+//! use leak_playground_std::marker::{Forget, Unforget};
+//! fn _internal_unforget_future() -> impl std::future::Future<Output = ()> + Forget {
 //!     async {
 //!         let num = std::hint::black_box(0);
-//!         let bor = Unleak::new_static(&num);
+//!         let bor = Unforget::new_static(&num);
 //!         let () = std::future::pending().await;
 //!         assert_eq!(**bor, 0);
 //!     }
 //! }
 //! ```
 //!
-//! `Leak` future with `JoinGuard`s. This is fine because of the pin's [drop
+//! `Forget` future with `JoinGuard`s. This is fine because of the pin's [drop
 //! guarantee](https://doc.rust-lang.org/1.75.0/std/pin/index.html#drop-guarantee).
 //!
 //! **Currently emits "higher-ranked lifetime error", instead of compiling**
 //!
 //! ```ignore
 //! use leak_playground_std::thread;
-//! use leak_playground_std::marker::Leak;
-//! fn _internal_join_guard_future() -> impl std::future::Future<Output = ()> + Leak {
+//! use leak_playground_std::marker::Forget;
+//! fn _internal_join_guard_future() -> impl std::future::Future<Output = ()> + Forget {
 //!     async {
 //!         let local = 42;
 //!         let thrd = thread::spawn_scoped({
@@ -39,15 +39,15 @@
 //! }
 //! ```
 //!
-//! `!Leak` future with external unleak logic
+//! `!Forget` future with external unforget logic
 //!
-//! **Currently emits "higher-ranked lifetime error", instead of something about unimplemented `Leak`**
+//! **Currently emits "higher-ranked lifetime error", instead of something about unimplemented `Forget`**
 //!
 //! ```compile_fail
-//! use leak_playground_std::marker::{Leak, Unleak};
-//! fn _external_unleak_future<'a>(num: &'a i32) -> impl std::future::Future<Output = ()> + Leak + 'a {
+//! use leak_playground_std::marker::{Forget, Unforget};
+//! fn _external_unforget_future<'a>(num: &'a i32) -> impl std::future::Future<Output = ()> + Forget + 'a {
 //!     async move {
-//!         let bor = Unleak::new_static(num);
+//!         let bor = Unforget::new_static(num);
 //!         let () = std::future::pending().await;
 //!         assert_eq!(**bor, 0);
 //!     }

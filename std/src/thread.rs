@@ -111,7 +111,7 @@
 use std::thread::JoinHandle;
 use std::{marker::PhantomData, thread};
 
-use crate::marker::{Leak, Unleak};
+use crate::marker::{Forget, Unforget};
 use crate::mem::{self, ManuallyDrop};
 use crate::rc::Rc;
 use crate::sync::Arc;
@@ -123,11 +123,11 @@ where
     T: Send + 'a,
 {
     JoinGuard {
-        // SAFETY: destruction guarantee from `Unleak<&'a ()>` and `T: 'a`
+        // SAFETY: destruction guarantee from `Unforget<&'a ()>` and `T: 'a`
         child: unsafe {
             ManuallyDrop::new_unchecked(thread::Builder::new().spawn_unchecked(f).unwrap())
         },
-        _borrow: Unleak::new_static(PhantomData),
+        _borrow: Unforget::new_static(PhantomData),
         _unsend: PhantomData,
     }
 }
@@ -146,18 +146,18 @@ where
 /// Handle to a thread, which joins on drop.
 ///
 /// Cannot be sent across threads, as opposed to [`SendJoinGuard`]. This
-/// is made to ensure we won't put this into itself, thus leaking it.
+/// is made to ensure we won't put this into itself, thus forgetting it.
 ///
 /// To spawn use [`spawn_scoped`].
 pub struct JoinGuard<'a, T> {
     child: ManuallyDrop<thread::JoinHandle<T>>,
 
     /// Not sure about covariance there.
-    _borrow: Unleak<'static, PhantomData<&'a ()>>,
+    _borrow: Unforget<'static, PhantomData<&'a ()>>,
     _unsend: PhantomData<*mut ()>,
 }
 
-unsafe impl<T> Send for JoinGuard<'_, T> where Self: Leak {}
+unsafe impl<T> Send for JoinGuard<'_, T> where Self: Forget {}
 unsafe impl<T> Sync for JoinGuard<'_, T> {}
 
 impl<T> JoinGuard<'_, T> {
@@ -188,7 +188,7 @@ impl<T> JoinGuard<'_, T> {
 
     pub fn into_arc(self) -> Arc<Self> {
         // SAFETY: we cannot move Arc<JoinGuard> into it's closure because
-        //   Arc<JoinGuard>: !Send, or otherwise JoinGuard: Leak
+        //   Arc<JoinGuard>: !Send, or otherwise JoinGuard: Forget
         unsafe { Arc::new_unchecked(self) }
     }
 }
@@ -215,7 +215,7 @@ impl<'a, T> Drop for JoinGuard<'a, T> {
         // Shouldn't panic
         let child = join_handle.thread().clone();
         // No panic since we guarantee that we would never join on ourselves,
-        // except when `Self: Leak`, then we don't care.
+        // except when `Self: Forget`, then we don't care.
         let res = join_handle.join();
         // Propagating panic there since structured parallelism, but ignoring
         // during panic. Anyway child thread is joined thus either would

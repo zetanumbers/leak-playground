@@ -2,7 +2,7 @@
 
 use std::{future::Future, marker::PhantomData, pin::Pin, ptr::NonNull};
 
-use leak_playground_std::marker::Unleak;
+use leak_playground_std::marker::Unforget;
 use leak_playground_std::mem::ManuallyDrop;
 use tokio::task::{AbortHandle, JoinError, JoinHandle};
 
@@ -17,7 +17,7 @@ where
         inner: unsafe {
             ManuallyDrop::new_unchecked(tokio::task::spawn(erased_send_future(future)))
         },
-        _unleak: Unleak::new_static(PhantomData),
+        _unforget: Unforget::new_static(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
     }
@@ -44,7 +44,7 @@ where
         inner: unsafe {
             ManuallyDrop::new_unchecked(tokio::task::spawn_local(erased_future(future)))
         },
-        _unleak: Unleak::new_static(PhantomData),
+        _unforget: Unforget::new_static(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
     }
@@ -61,7 +61,7 @@ where
         inner: unsafe {
             ManuallyDrop::new_unchecked(tokio::task::spawn_blocking(erased_send_fn_once(f)))
         },
-        _unleak: Unleak::new_static(PhantomData),
+        _unforget: Unforget::new_static(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
     }
@@ -83,14 +83,14 @@ where
 ///
 /// Cannot be sent across threads, as opposed to
 /// [`ScopedSendJoinHandle`]. This is made to ensure we won't put this
-/// into itself, thus leaking it.
+/// into itself, thus forgetting it.
 ///
 /// To spawn use [`spawn_scoped`], [`spawn_local_scoped`], or
 /// [`spawn_blocking_scoped`].
 pub struct ScopedJoinHandle<'a, T> {
     inner: ManuallyDrop<JoinHandle<Payload>>,
-    _unleak: Unleak<'static, PhantomData<&'a ()>>,
-    // No need for Unleak since we put bound `T: 'a` on constructors
+    _unforget: Unforget<'static, PhantomData<&'a ()>>,
+    // No need for Unforget since we put bound `T: 'a` on constructors
     _output: PhantomData<T>,
     _unsend: PhantomData<*mut ()>,
 }

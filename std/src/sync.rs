@@ -5,17 +5,17 @@ mod arc;
 pub mod mpsc {
     use std::sync::mpsc;
 
-    use crate::marker::Leak;
+    use crate::marker::Forget;
 
     pub fn rendezvous_channel<T>() -> (mpsc::SyncSender<T>, mpsc::Receiver<T>) {
         mpsc::sync_channel(0)
     }
 
-    pub fn sync_channel<T: Leak>(bound: usize) -> (mpsc::SyncSender<T>, mpsc::Receiver<T>) {
+    pub fn sync_channel<T: Forget>(bound: usize) -> (mpsc::SyncSender<T>, mpsc::Receiver<T>) {
         mpsc::sync_channel(bound)
     }
 
-    pub fn channel<T: Leak>() -> (mpsc::Sender<T>, mpsc::Receiver<T>) {
+    pub fn channel<T: Forget>() -> (mpsc::Sender<T>, mpsc::Receiver<T>) {
         mpsc::channel()
     }
 

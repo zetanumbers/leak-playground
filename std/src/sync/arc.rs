@@ -3,7 +3,7 @@
 use core::fmt;
 use std::sync::Arc as StdArc;
 
-use crate::marker::Leak;
+use crate::marker::Forget;
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Arc<T> {
@@ -13,7 +13,7 @@ pub struct Arc<T> {
 impl<T> Arc<T> {
     pub fn new(x: T) -> Self
     where
-        T: Leak,
+        T: Forget,
     {
         Arc {
             inner: StdArc::new(x),

@@ -3,7 +3,7 @@
 use core::fmt;
 use std::rc::Rc as StdRc;
 
-use crate::marker::Leak;
+use crate::marker::Forget;
 
 #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Rc<T> {
@@ -13,7 +13,7 @@ pub struct Rc<T> {
 impl<T> Rc<T> {
     pub fn new(x: T) -> Self
     where
-        T: Leak,
+        T: Forget,
     {
         Rc {
             inner: StdRc::new(x),

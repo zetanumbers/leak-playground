@@ -2,7 +2,7 @@
 
 use std::{fmt::Debug, future::Future, marker::PhantomData, pin::Pin, task};
 
-/// A transparent wrapper type to use with [`crate::marker::Unleak`]. To
+/// A transparent wrapper type to use with [`crate::marker::Unforget`]. To
 /// anchor a value is to restrict its lifetime.
 #[repr(transparent)]
 #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -48,7 +48,7 @@ impl<'a, T> Anchored<'a, T> {
     ///
     /// # Safety
     ///
-    /// Make sure you don't outlive your [`crate::marker::Unleak`]
+    /// Make sure you don't outlive your [`crate::marker::Unforget`]
     /// instances.
     pub unsafe fn unanchor(self) -> T {
         self.inner

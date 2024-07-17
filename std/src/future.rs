@@ -9,7 +9,7 @@
 //! fn _internal_unforget_future() -> impl std::future::Future<Output = ()> + Forget {
 //!     async {
 //!         let num = std::hint::black_box(0);
-//!         let bor = Unforget::new_static(&num);
+//!         let bor = Unforget::new(&num);
 //!         let () = std::future::pending().await;
 //!         assert_eq!(**bor, 0);
 //!     }
@@ -47,7 +47,7 @@
 //! use leak_playground_std::marker::{Forget, Unforget};
 //! fn _external_unforget_future<'a>(num: &'a i32) -> impl std::future::Future<Output = ()> + Forget + 'a {
 //!     async move {
-//!         let bor = Unforget::new_static(num);
+//!         let bor = Unforget::new(num);
 //!         let () = std::future::pending().await;
 //!         assert_eq!(**bor, 0);
 //!     }

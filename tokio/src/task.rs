@@ -17,7 +17,7 @@ where
         inner: unsafe {
             ManuallyDrop::new_unchecked(tokio::task::spawn(erased_send_future(future)))
         },
-        _unforget: Unforget::new_static(PhantomData),
+        _unforget: Unforget::new(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
     }
@@ -44,7 +44,7 @@ where
         inner: unsafe {
             ManuallyDrop::new_unchecked(tokio::task::spawn_local(erased_future(future)))
         },
-        _unforget: Unforget::new_static(PhantomData),
+        _unforget: Unforget::new(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
     }
@@ -61,7 +61,7 @@ where
         inner: unsafe {
             ManuallyDrop::new_unchecked(tokio::task::spawn_blocking(erased_send_fn_once(f)))
         },
-        _unforget: Unforget::new_static(PhantomData),
+        _unforget: Unforget::new(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
     }

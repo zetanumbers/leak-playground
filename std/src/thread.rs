@@ -127,7 +127,7 @@ where
         child: unsafe {
             ManuallyDrop::new_unchecked(thread::Builder::new().spawn_unchecked(f).unwrap())
         },
-        _borrow: Unforget::new_static(PhantomData),
+        _borrow: Unforget::new(PhantomData),
         _unsend: PhantomData,
     }
 }

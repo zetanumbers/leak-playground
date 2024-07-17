@@ -1,6 +1,5 @@
 #![feature(auto_traits, negative_impls, thread_spawn_unchecked)]
 
-pub mod anchor;
 pub mod future;
 pub mod marker;
 pub mod mem;

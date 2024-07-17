@@ -2,8 +2,6 @@
 
 use std::{fmt::Debug, future::Future, marker::PhantomData, pin::Pin, task};
 
-use crate::anchor::Anchored;
-
 /// The core trait of the destruction guarantee.
 ///
 /// # Safety
@@ -37,7 +35,7 @@ impl<T: ?Sized + Debug> Debug for Unforget<'_, T> {
 pub use Unforget as Unleak;
 
 impl<T> Unforget<'static, T> {
-    pub const fn new_static(inner: T) -> Self {
+    pub const fn new(inner: T) -> Self {
         Unforget {
             _unforget: PhantomStaticUnforget,
             _anchor: PhantomData,
@@ -47,7 +45,7 @@ impl<T> Unforget<'static, T> {
 }
 
 impl<'a, T> Unforget<'a, T> {
-    pub fn with_anchored<U>(inner: T, _anchored: &Anchored<'a, U>) -> Self {
+    pub fn with_lifetime(inner: T) -> Self {
         Unforget {
             _unforget: PhantomStaticUnforget,
             _anchor: PhantomData,

@@ -6,8 +6,7 @@ use leak_playground_std::marker::Unforget;
 use leak_playground_std::mem::ManuallyDrop;
 use tokio::task::{AbortHandle, JoinError, JoinHandle};
 
-/// Spawns a non-static `Send` future, returning a `!Send` for non-static
-/// cases handle for it.
+/// Spawns a non-static `Send` future, returning for non-static cases a `!Send` task handle.
 pub fn spawn_scoped<'a, F>(future: F) -> ScopedJoinHandle<'a, F::Output>
 where
     F: Future + Send + 'a,
@@ -20,17 +19,6 @@ where
         _unforget: Unforget::new(PhantomData),
         _unsend: PhantomData,
         _output: PhantomData,
-    }
-}
-
-/// Spawns a non-static `Send` future, returning a `Send` handle for it.
-pub fn spawn_borrowed<'a, F>(future: Pin<&'a mut F>) -> ScopedSendJoinHandle<'a, F::Output>
-where
-    F: Future + Send + 'a,
-    F::Output: Send + 'a,
-{
-    ScopedSendJoinHandle {
-        inner: spawn_scoped(future),
     }
 }
 
@@ -50,8 +38,7 @@ where
     }
 }
 
-/// Runs the provided non-static closure on a thread where blocking is
-/// acceptable. Returns a `?Send` handle for it.
+/// Runs the provided non-static closure on a thread where blocking is acceptable.
 pub fn spawn_blocking_scoped<'a, F, T>(f: F) -> ScopedJoinHandle<'a, T>
 where
     F: FnOnce() -> T + Send + 'a,
@@ -67,23 +54,9 @@ where
     }
 }
 
-/// Runs the provided non-static closure on a thread where blocking is
-/// acceptable. Returns a `Send` handle for it.
-pub fn spawn_blocking_borrowed<'a, F, T>(f: &'a mut F) -> ScopedSendJoinHandle<'a, T>
-where
-    F: FnMut() -> T + Send + 'a,
-    T: Send + 'a,
-{
-    ScopedSendJoinHandle {
-        inner: spawn_blocking_scoped(f),
-    }
-}
-
 /// Handle to a task, which cancels on drop.
 ///
-/// Cannot be sent across threads, as opposed to
-/// [`ScopedSendJoinHandle`]. This is made to ensure we won't put this
-/// into itself, thus forgetting it.
+/// This is made to ensure we won't put task into itself, thus forgetting it.
 ///
 /// To spawn use [`spawn_scoped`], [`spawn_local_scoped`], or
 /// [`spawn_blocking_scoped`].
@@ -150,59 +123,6 @@ impl<'a, T> Drop for ScopedJoinHandle<'a, T> {
         });
     }
 }
-
-/// Handle to a task, which cancels on drop. Implements `Send`.
-///
-/// Can be sent across threads, but can be more awkward to use than
-/// [`ScopedJoinHandle`].
-///
-/// To spawn use [`spawn_borrowed`], [`spawn_blocking_borrowed`].
-pub struct ScopedSendJoinHandle<'a, T> {
-    inner: ScopedJoinHandle<'a, T>,
-}
-
-// SAFETY: we use this for borrowed futures
-unsafe impl<'a, T: Send> Send for ScopedSendJoinHandle<'a, T> {}
-
-impl<'a, T> Future for ScopedSendJoinHandle<'a, T> {
-    type Output = Result<T, JoinError>;
-
-    fn poll(
-        mut self: Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
-        Pin::new(&mut self.inner).poll(cx)
-    }
-}
-
-impl<'a, T> ScopedSendJoinHandle<'a, T> {
-    pub async fn cancel(self) -> Result<(), JoinError> {
-        self.inner.cancel().await
-    }
-
-    pub fn abort(&self) {
-        self.inner.abort();
-    }
-
-    pub fn abort_handle(&self) -> AbortHandle {
-        self.inner.abort_handle()
-    }
-}
-
-impl<'a, T> From<ScopedSendJoinHandle<'a, T>> for ScopedJoinHandle<'a, T> {
-    fn from(value: ScopedSendJoinHandle<'a, T>) -> Self {
-        value.inner
-    }
-}
-
-impl<T> From<ScopedJoinHandle<'static, T>> for ScopedSendJoinHandle<'static, T> {
-    fn from(inner: ScopedJoinHandle<'static, T>) -> Self {
-        ScopedSendJoinHandle { inner }
-    }
-}
-
-// TODO: `impl<T> From<ScopedSendJoinHandle<'static, T>> for JoinHandle<T>`
-//  is possible but requires internals to avoid hacky `Payload` return type
 
 // # Hack-around utilities
 

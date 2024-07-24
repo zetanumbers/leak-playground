@@ -11,6 +11,7 @@ pub struct Arc<T> {
 }
 
 impl<T> Arc<T> {
+    /// Constructs a new `Arc<T>`.
     pub fn new(x: T) -> Self
     where
         T: Forget,
@@ -20,6 +21,11 @@ impl<T> Arc<T> {
         }
     }
 
+    /// Constructs a new `Arc<T>`, where `T` is an unforgettable type.
+    ///
+    /// # Safety
+    ///
+    /// `T` must not take ownership over itself.
     pub unsafe fn new_unchecked(x: T) -> Self {
         Arc {
             inner: StdArc::new(x),

@@ -11,6 +11,7 @@ pub struct Rc<T> {
 }
 
 impl<T> Rc<T> {
+    /// Constructs a new `Rc<T>`.
     pub fn new(x: T) -> Self
     where
         T: Forget,
@@ -20,6 +21,11 @@ impl<T> Rc<T> {
         }
     }
 
+    /// Constructs a new `Rc<T>`, where `T` is an unforgettable type.
+    ///
+    /// # Safety
+    ///
+    /// `T` must not take ownership over itself.
     pub unsafe fn new_unchecked(x: T) -> Self {
         Rc {
             inner: StdRc::new(x),

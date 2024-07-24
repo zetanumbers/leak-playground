@@ -1,0 +1,11 @@
+[package]
+name = "leak-playground-flume"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+flume = "0.11.0"
+leak-playground-std = { version = "0.1.0", path = "../std" }
+
+[dev-dependencies]
+noop-waker = "0.1.0"

@@ -17,7 +17,6 @@ where
             ManuallyDrop::new_unchecked(tokio::task::spawn(erased_send_future(future)))
         },
         _unforget: Unforget::new(PhantomData),
-        _unsend: PhantomData,
         _output: PhantomData,
     }
 }
@@ -33,7 +32,6 @@ where
             ManuallyDrop::new_unchecked(tokio::task::spawn_local(erased_future(future)))
         },
         _unforget: Unforget::new(PhantomData),
-        _unsend: PhantomData,
         _output: PhantomData,
     }
 }
@@ -49,7 +47,6 @@ where
             ManuallyDrop::new_unchecked(tokio::task::spawn_blocking(erased_send_fn_once(f)))
         },
         _unforget: Unforget::new(PhantomData),
-        _unsend: PhantomData,
         _output: PhantomData,
     }
 }
@@ -65,11 +62,11 @@ pub struct ScopedJoinHandle<'a, T> {
     _unforget: Unforget<'static, PhantomData<&'a ()>>,
     // No need for Unforget since we put bound `T: 'a` on constructors
     _output: PhantomData<T>,
-    _unsend: PhantomData<*mut ()>,
+    // _unsend: PhantomData<*mut ()>,
 }
 
-unsafe impl<T: Send> Send for ScopedJoinHandle<'static, T> {}
-unsafe impl<T: Send> Sync for ScopedJoinHandle<'_, T> {}
+// unsafe impl<T: Send> Send for ScopedJoinHandle<'static, T> {}
+// unsafe impl<T: Send> Sync for ScopedJoinHandle<'_, T> {}
 impl<T> Unpin for ScopedJoinHandle<'_, T> {}
 
 impl<'a, T> Future for ScopedJoinHandle<'a, T> {

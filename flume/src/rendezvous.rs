@@ -3,24 +3,24 @@
 //! # Examples
 //!
 //! ```rust,compile_fail
-//! use std::{future::Future, pin::Pin, task};
-//! use noop_waker::noop_waker;
-//! use leak_playground_flume::*;
-//! use leak_playground_std::marker::{Forget, Unforget};
-//!
-//! let i = 37;
-//! {
-//!    let d = Unforget::<'static, &i32>::new(&i);
-//!    let (tx, rx) = rendezvous();
-//!
-//!    let waker = noop_waker();
-//!    let mut cx = task::Context::from_waker(&waker);
-//!
-//!    let mut rx = Box::pin(rx.into_recv_async());
-//!    assert!(rx.as_mut().poll(&mut cx).is_pending());
-//!
-//!    tx.try_send((rx as Pin<Box<dyn Forget + '_>>, d)).unwrap();
-//! }
+use std::{future::Future, pin::Pin, task};
+use noop_waker::noop_waker;
+use leak_playground_flume::*;
+use leak_playground_std::marker::{Forget, Unforget};
+
+let i = 37;
+{
+   let d = Unforget::<'static, &i32>::new(&i);
+   let (tx, rx) = rendezvous();
+
+   let waker = noop_waker();
+   let mut cx = task::Context::from_waker(&waker);
+
+   let mut rx = Box::pin(rx.into_recv_async());
+   assert!(rx.as_mut().poll(&mut cx).is_pending());
+
+   tx.try_send((rx as Pin<Box<dyn Forget + '_>>, d)).unwrap();
+}
 //! ```
 
 use std::{

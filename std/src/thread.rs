@@ -33,7 +33,6 @@ where
             ManuallyDrop::new_unchecked(thread::Builder::new().spawn_unchecked(f).unwrap())
         },
         _borrow: Unforget::new(PhantomData),
-        _unsend: PhantomData,
     }
 }
 
@@ -48,11 +47,7 @@ pub struct JoinGuard<'a, T> {
 
     /// Not sure about covariance there.
     _borrow: Unforget<'static, PhantomData<&'a ()>>,
-    _unsend: PhantomData<*mut ()>,
 }
-
-unsafe impl<T> Send for JoinGuard<'_, T> where Self: Forget {}
-unsafe impl<T> Sync for JoinGuard<'_, T> {}
 
 impl<T> JoinGuard<'_, T> {
     pub fn join(mut self) -> std::thread::Result<T> {
